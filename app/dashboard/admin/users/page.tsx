@@ -1,27 +1,35 @@
 'use client';
 
-import { useState, useEffect, FormEvent, useRef } from 'react';
+import { useState, useEffect, FormEvent, useRef, useCallback } from 'react';
 import { db } from '../../../../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import * as faceapi from 'face-api.js';
 
-interface User { id: string; name: string; email: string; role: string; }
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // State for Create User modal
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('student');
+  const [year, setYear] = useState<number>(1);
   const [faceDescriptor, setFaceDescriptor] = useState<Float32Array | null>(null);
   const [feedback, setFeedback] = useState('');
+  
+  // Loading states for actions
   const [isCreating, setIsCreating] = useState(false);
   const [deletingUid, setDeletingUid] = useState<string | null>(null);
-  const [year, setYear] = useState<number>(1);
 
   useEffect(() => {
     const loadModels = async () => {
@@ -42,12 +50,19 @@ export default function AdminUsersPage() {
     return () => unsubscribe();
   }, []);
 
-  const processImageForDescriptor = async (imageElement: HTMLImageElement | HTMLVideoElement) => {
+  const processImageForDescriptor = async (imageElement: HTMLImageElement) => {
     setFeedback("Processing image...");
-    
-    // 👇 THIS IS THE CORRECTED LINE
+
+    const canvas = document.createElement('canvas');
+    const MAX_WIDTH = 600;
+    const scale = MAX_WIDTH / imageElement.width;
+    canvas.width = MAX_WIDTH;
+    canvas.height = imageElement.height * scale;
+    const ctx = canvas.getContext('2d');
+    ctx?.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
+
     const detection = await faceapi
-      .detectSingleFace(imageElement, new faceapi.TinyFaceDetectorOptions())
+      .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
       .withFaceLandmarks()
       .withFaceDescriptor();
     
@@ -74,22 +89,29 @@ export default function AdminUsersPage() {
       setEmail('');
       setPassword('');
       setRole('student');
+      setYear(1); // Also reset the year
       setFaceDescriptor(null);
       setFeedback('');
   };
 
   const handleCreateUser = async (e: FormEvent) => {
     e.preventDefault();
-    setIsCreating(true); 
     if (role === 'student' && !faceDescriptor) {
       alert("Please capture a face encoding for the student.");
       return;
     }
     
+    setIsCreating(true);
     const functions = getFunctions();
-    const createUser = httpsCallable(functions, 'createUser');
+    const createUserCallable = httpsCallable(functions, 'createUser');
+
+    const userData = {
+        name, email, password, role, year,
+        faceDescriptor: role === 'student' ? Array.from(faceDescriptor || []) : null,
+    };
+
     try {
-      await createUser({ name, email, password, role, year, faceDescriptor: Array.from(faceDescriptor || []) });
+      await createUserCallable(userData);
       resetModalState();
     } catch (error) {
         console.error("Error creating user:", error);
@@ -103,15 +125,15 @@ export default function AdminUsersPage() {
     if (confirm('Are you sure you want to permanently delete this user?')) {
         setDeletingUid(uidToDelete);
         const functions = getFunctions();
-        const deleteUser = httpsCallable(functions, 'deleteUser');
+        const deleteUserCallable = httpsCallable(functions, 'deleteUser');
         try {
-            await deleteUser({ uidToDelete });
+            await deleteUserCallable({ uidToDelete });
         } catch (error) {
             console.error("Error deleting user:", error);
             alert((error as any).message);
         } finally {
-        setDeletingUid(null); // 👈 Clear the deleting state
-      }
+            setDeletingUid(null);
+        }
     }
   };
 
@@ -149,7 +171,7 @@ export default function AdminUsersPage() {
                 <td className="whitespace-nowrap px-6 py-4">
                     <button 
                       onClick={() => handleDeleteUser(user.id)} 
-                      disabled={deletingUid === user.id} // 👈 Disable button if it's being deleted
+                      disabled={deletingUid === user.id}
                       className="text-red-500 hover:text-red-700 font-semibold disabled:text-gray-400 disabled:cursor-wait"
                     >
                       {deletingUid === user.id ? 'Deleting...' : 'Delete'}
@@ -188,34 +210,22 @@ export default function AdminUsersPage() {
               </div>
 
               {role === 'student' && (
-                            <>
-                                <div className="mb-4">
-                                    <label className="block text-sm font-medium text-gray-700">Year</label>
-                                    <input 
-                                        type="number" 
-                                        value={year} 
-                                        onChange={(e) => setYear(Number(e.target.value))} 
-                                        className="w-full mt-1 p-2 border rounded-md" 
-                                        required 
-                                        min="1" 
-                                        max="5"
-                                    />
-                                </div>
-                <div className="mt-4 p-4 border rounded-lg">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Student Face Registration</label>
-                    <input type="file" accept="image/jpeg, image/png" onChange={handleImageUpload} className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
-                    <p className={`mt-2 text-sm font-semibold ${feedback.includes('✅') ? 'text-green-600' : 'text-red-600'}`}>{feedback || 'Upload a clear, forward-facing photo.'}</p>
-                </div>
+                <>
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700">Year</label>
+                        <input type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} className="w-full mt-1 p-2 border rounded-md" required min="1" max="5"/>
+                    </div>
+                    <div className="p-4 border rounded-lg">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Student Face Registration</label>
+                        <input type="file" accept="image/jpeg, image/png" onChange={handleImageUpload} className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                        <p className={`mt-2 text-sm font-semibold ${feedback.includes('✅') ? 'text-green-600' : 'text-red-600'}`}>{feedback || 'Upload a clear, forward-facing photo.'}</p>
+                    </div>
                 </>
               )}
               
-              <div className="flex justify-end space-x-4">
-                  <button type="button" onClick={() => setShowModal(false)} disabled={isCreating}>Cancel</button>
-                  <button 
-                    type="submit" 
-                    disabled={isCreating} // 👈 Disable button while creating
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg disabled:bg-indigo-300 disabled:cursor-wait"
-                  >
+              <div className="flex justify-end space-x-4 mt-6">
+                  <button type="button" onClick={resetModalState} disabled={isCreating} className="px-4 py-2 bg-gray-200 rounded-lg">Cancel</button>
+                  <button type="submit" disabled={isCreating} className="px-4 py-2 bg-indigo-600 text-white rounded-lg disabled:bg-indigo-300 disabled:cursor-wait">
                     {isCreating ? 'Creating...' : 'Create'}
                   </button>
               </div>
@@ -226,3 +236,4 @@ export default function AdminUsersPage() {
     </div>
   );
 }
+

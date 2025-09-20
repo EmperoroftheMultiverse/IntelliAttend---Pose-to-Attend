@@ -4,21 +4,25 @@ import * as admin from "firebase-admin";
 admin.initializeApp();
 const db = admin.firestore();
 
-interface DeleteUserData {
-  uidToDelete: string;
-}
-
+// --- TYPE DEFINITIONS ---
 interface CreateUserData {
   name: string;
   email: string;
   password: string;
   role: "student" | "professor" | "admin";
-  faceDescriptor?: number[]; // 👈 Add optional face descriptor
+  faceDescriptor?: number[];
   year?: number;
 }
 
+interface DeleteUserData {
+  uidToDelete: string;
+}
+
+// ===================================================================
+// ==                      CREATE USER FUNCTION                     ==
+// ===================================================================
 export const createUser = functions.https.onCall(async (data, context) => {
-  // 1. Check if the user making the request is an admin
+  // 1. Verify the user making the request is an admin
   if (!context.auth) {
     throw new functions.https.HttpsError(
       "unauthenticated",
@@ -33,28 +37,44 @@ export const createUser = functions.https.onCall(async (data, context) => {
     );
   }
 
-  // 2. Safely access the data properties
-  const {email, password, name, role, faceDescriptor, year} = data as CreateUserData; // 👈 Get year
+  // 2. Validate incoming data
+  const {email, password, name, role, faceDescriptor, year} = data as CreateUserData;
+
+  // Add logging to see what the function receives
+  console.log(`Request to create user: ${name} (${email}), Role: ${role}, Year: ${year}`);
+  console.log(`Received face descriptor with length: ${faceDescriptor?.length || 0}`);
+
   if (!email || !password || !name || !role) {
     throw new functions.https.HttpsError(
-      "invalid-argument", "Missing user data.",
+      "invalid-argument", "Missing required user data.",
     );
   }
 
   try {
+    // 3. Create the user in Firebase Authentication
     const userRecord = await admin.auth().createUser({
       email: email,
       password: password,
       displayName: name,
     });
 
-    await db.collection("users").doc(userRecord.uid).set({
+    // 4. Prepare the user profile data for Firestore
+    const userProfileData: { [key: string]: any } = {
       email: email,
       name: name,
       role: role,
-      faceDescriptor: faceDescriptor || null,
-      year: role === 'student' ? year : null,
-    });
+    };
+
+    // 5. Conditionally add student-specific fields
+    if (role === 'student') {
+        userProfileData.year = year || 1; // Default to year 1 if not provided
+        if (Array.isArray(faceDescriptor) && faceDescriptor.length > 0) {
+            userProfileData.faceDescriptor = faceDescriptor;
+        }
+    }
+
+    // 6. Save the profile to Firestore
+    await db.collection("users").doc(userRecord.uid).set(userProfileData);
 
     return {result: `Successfully created user ${email}`};
   } catch (error) {
@@ -65,6 +85,9 @@ export const createUser = functions.https.onCall(async (data, context) => {
   }
 });
 
+// ===================================================================
+// ==                      DELETE USER FUNCTION                     ==
+// ===================================================================
 export const deleteUser = functions.https.onCall(async (data, context) => {
   // (Admin check)
   if (!context.auth) {
