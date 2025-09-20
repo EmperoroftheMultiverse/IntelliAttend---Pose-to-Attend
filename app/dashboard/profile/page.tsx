@@ -51,10 +51,34 @@ export default function ProfilePage() {
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(file);
-    img.onload = () => processImageForDescriptor(img);
-  };
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = document.createElement('img');
+        img.onload = () => {
+            const MAX_WIDTH = 600;
+            // Resize image if it's too large
+            if (img.width > MAX_WIDTH) {
+                const canvas = document.createElement('canvas');
+                const scaleFactor = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scaleFactor;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                // Create a new image from the resized canvas
+                const resizedImg = document.createElement('img');
+                resizedImg.src = canvas.toDataURL('image/jpeg');
+                resizedImg.onload = () => processImageForDescriptor(resizedImg);
+            } else {
+                // Process the original image if it's small enough
+                processImageForDescriptor(img);
+            }
+        };
+        img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+};
 
   const handleSaveNewFace = async () => {
     if (!user || !faceDescriptor) {

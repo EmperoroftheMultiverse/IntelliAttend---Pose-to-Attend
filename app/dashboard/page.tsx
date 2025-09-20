@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { db } from '../../lib/firebase';
-import { collection, onSnapshot, query, orderBy, where, Timestamp, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, where, Timestamp, getDocs, documentId } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import StatCard from '../../components/StatCard';
 import AttendanceChart from '../../components/AttendanceChart';
 
-// Define the shape of our data
+// --- INTERFACES ---
 interface AttendanceRecord {
   id: string;
   studentName: string;
@@ -19,8 +19,14 @@ interface AttendanceRecord {
   timestamp: Timestamp;
 }
 
+interface Subject {
+  id: string;
+  subjectName: string;
+  subjectCode: string;
+}
+
 // ===================================================================
-// ==                   NEW: ADMIN DASHBOARD COMPONENT              ==
+// ==                   ADMIN DASHBOARD COMPONENT                   ==
 // ===================================================================
 function AdminDashboard() {
   const [stats, setStats] = useState({ userCount: 0, subjectCount: 0, attendanceToday: 0 });
@@ -28,21 +34,17 @@ function AdminDashboard() {
 
   useEffect(() => {
     const fetchAdminStats = async () => {
-      // Fetch total users
       const usersSnapshot = await getDocs(collection(db, 'users'));
-      const userCount = usersSnapshot.size;
-
-      // Fetch total subjects
       const subjectsSnapshot = await getDocs(collection(db, 'subjects'));
-      const subjectCount = subjectsSnapshot.size;
-      
-      // Fetch attendance for today
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const today = new Date().toISOString().split('T')[0];
       const attendanceQuery = query(collection(db, 'attendance'), where('date', '==', today));
       const attendanceSnapshot = await getDocs(attendanceQuery);
-      const attendanceToday = attendanceSnapshot.size;
       
-      setStats({ userCount, subjectCount, attendanceToday });
+      setStats({
+        userCount: usersSnapshot.size,
+        subjectCount: subjectsSnapshot.size,
+        attendanceToday: attendanceSnapshot.size,
+      });
       setLoading(false);
     };
     
@@ -64,83 +66,58 @@ function AdminDashboard() {
 // ==                  PROFESSOR DASHBOARD COMPONENT                ==
 // ===================================================================
 function ProfessorDashboard() {
-  const { user } = useAuth(); // Get the current user
+  const { user } = useAuth();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [subjectCount, setSubjectCount] = useState(0);
   const [timePeriod, setTimePeriod] = useState('daily');
 
   useEffect(() => {
+    if (!user) return;
+
     const fetchSubjectCount = async () => {
-      if (!user) return;
       const q = query(collection(db, 'subjects'), where('professorId', '==', user.uid));
       const querySnapshot = await getDocs(q);
-      setSubjectCount(querySnapshot.size); // Get the number of documents
+      setSubjectCount(querySnapshot.size);
     };
-
     fetchSubjectCount();
 
-    
-
-    // In a real app, you might filter by professorId: where('professorId', '==', user.uid)
     const q_attendance = query(collection(db, 'attendance'), orderBy('timestamp', 'desc'));
-    
     const unsubscribe = onSnapshot(q_attendance, (querySnapshot) => {
-      const records: AttendanceRecord[] = [];
-      querySnapshot.forEach((doc) => {
-        records.push({ id: doc.id, ...doc.data() } as AttendanceRecord);
-      });
+      const records = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord));
       setAttendance(records);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   const chartData = useMemo(() => {
     const counts: { [key: string]: number } = {};
-    
-    if (!attendance) return [];
-
     attendance.forEach(record => {
       const date = record.timestamp.toDate();
       let key = '';
-
       switch (timePeriod) {
         case 'weekly':
-          // Group by week number and year
           const weekStart = new Date(date.setDate(date.getDate() - date.getDay()));
           key = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           break;
         case 'monthly':
-          // Group by month and year
           key = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
           break;
-        case 'daily':
         default:
-          // Group by specific day
           key = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           break;
       }
-
-      if (counts[key]) {
-        counts[key]++;
-      } else {
-        counts[key] = 1;
-      }
+      if (counts[key]) counts[key]++; else counts[key] = 1;
     });
-
-    return Object.keys(counts).map(key => ({
-      date: key,
-      present: counts[key],
-    })).reverse();
-  }, [attendance, timePeriod]); // Re-run only when attendance data or timePeriod changes
+    return Object.keys(counts).map(key => ({ date: key, present: counts[key] })).reverse();
+  }, [attendance, timePeriod]);
 
   const getTodaysUniqueAttendees = () => {
     const today = new Date().toDateString();
     const todaysRecords = attendance.filter(record => record.timestamp.toDate().toDateString() === today);
-    const uniqueNames = new Set(todaysRecords.map(rec => rec.studentName));
-    return uniqueNames.size;
+    return new Set(todaysRecords.map(rec => rec.studentName)).size;
   };
 
   if (loading) return <div className="text-center">Loading Professor Dashboard...</div>;
@@ -150,39 +127,29 @@ function ProfessorDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <StatCard title="Students Present Today" value={getTodaysUniqueAttendees()} />
         <StatCard title="Total Attendance Records" value={attendance.length} />
-        <StatCard title="Active Subjects" value={subjectCount} /> {/* Example static value */}
+        <StatCard title="Active Subjects" value={subjectCount} />
       </div>
       <div className="mb-6 bg-white p-6 rounded-lg shadow-md">
         <div className="flex justify-between items-center mb-4">
             <h3 className="font-semibold text-gray-700">Attendance Trend</h3>
-            {/* 👇 Add buttons to control the time period */}
             <div className="flex space-x-2">
                 <button onClick={() => setTimePeriod('daily')} className={`px-3 py-1 text-sm rounded-md ${timePeriod === 'daily' ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}>Daily</button>
                 <button onClick={() => setTimePeriod('weekly')} className={`px-3 py-1 text-sm rounded-md ${timePeriod === 'weekly' ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}>Weekly</button>
                 <button onClick={() => setTimePeriod('monthly')} className={`px-3 py-1 text-sm rounded-md ${timePeriod === 'monthly' ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}>Monthly</button>
             </div>
         </div>
-        {/* We will pass processed data to the chart component below */}
         <AttendanceChart data={chartData} /> 
       </div>
       <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
-        <div className="px-6 py-4">
-          <h2 className="text-xl font-semibold text-gray-700">Full Attendance Log</h2>
-        </div>
+        <div className="px-6 py-4 border-b"><h2 className="text-xl font-semibold">Full Attendance Log</h2></div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm font-light">
              <thead className="border-b bg-gray-100 font-medium">
-              <tr>
-                <th scope="col" className="px-6 py-4">Student Name</th>
-                <th scope="col" className="px-6 py-4">Timestamp</th>
-              </tr>
+              <tr><th scope="col" className="px-6 py-4">Student Name</th><th scope="col" className="px-6 py-4">Timestamp</th></tr>
             </thead>
             <tbody>
               {attendance.map((record) => (
-                <tr key={record.id} className="border-b transition duration-300 ease-in-out hover:bg-neutral-100">
-                  <td className="whitespace-nowrap px-6 py-4 font-medium">{record.studentName}</td>
-                  <td className="whitespace-nowrap px-6 py-4">{record.timestamp.toDate().toLocaleString()}</td>
-                </tr>
+                <tr key={record.id} className="border-b"><td className="px-6 py-4 font-medium">{record.studentName}</td><td className="px-6 py-4">{record.timestamp.toDate().toLocaleString()}</td></tr>
               ))}
             </tbody>
           </table>
@@ -191,7 +158,6 @@ function ProfessorDashboard() {
     </section>
   );
 }
-
 
 // ===================================================================
 // ==                   STUDENT DASHBOARD COMPONENT                 ==
@@ -200,70 +166,62 @@ function StudentDashboard() {
   const { user } = useAuth();
   const router = useRouter();
   const [myAttendance, setMyAttendance] = useState<AttendanceRecord[]>([]);
-  const [subjectsMap, setSubjectsMap] = useState<{[key: string]: string}>({});
+  const [mySubjects, setMySubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return; // Don't run query if user is not loaded yet
+    if (!user) return;
 
-    const fetchSubjectsMap = async () => {
-        const querySnapshot = await getDocs(collection(db, "subjects"));
-        const map: {[key: string]: string} = {};
-        querySnapshot.forEach((doc) => {
-            map[doc.id] = doc.data().subjectName;
-        });
-        setSubjectsMap(map);
-    };
-    fetchSubjectsMap();
-
-    // Query for attendance records where studentId matches the current user's UID
-    const q = query(
-      collection(db, 'attendance'), 
-      where('studentId', '==', user.uid),
-      orderBy('timestamp', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const records: AttendanceRecord[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord));
+    const q = query(collection(db, 'attendance'), where('studentId', '==', user.uid));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const records = snapshot.docs.map(doc => doc.data() as AttendanceRecord);
       setMyAttendance(records);
+
+      const uniqueSubjectIds = [...new Set(records.map(rec => rec.subjectId))];
+      
+      if (uniqueSubjectIds.length > 0) {
+        const subjectsQuery = query(collection(db, 'subjects'), where(documentId(), 'in', uniqueSubjectIds));
+        const subjectsSnapshot = await getDocs(subjectsQuery);
+        const subjectsList = subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
+        setMySubjects(subjectsList);
+      }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [user]); // Rerun effect if user object changes
+  }, [user]);
 
-  if (loading) return <div className="text-center">Loading Your Attendance...</div>;
+  if (loading) return <div>Loading Your Dashboard...</div>;
 
   return (
     <section>
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <StatCard title="My Total Check-ins" value={myAttendance.length} />
+        <StatCard title="Enrolled Subjects" value={mySubjects.length} />
        </div>
+       
+       <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-2">My Subjects</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {mySubjects.map((subject) => (
+                <Link key={subject.id} href={`/dashboard/my-subjects/${subject.id}`}>
+                    <div className="block p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                        <h3 className="text-lg font-semibold text-indigo-600">{subject.subjectName}</h3>
+                        <p className="text-gray-500">{subject.subjectCode}</p>
+                    </div>
+                </Link>
+            ))}
+            </div>
+       </div>
+
        <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
-        <div className="px-6 py-4">
-          <h2 className="text-xl font-semibold text-gray-700">My Attendance History</h2>
-          <p className="text-sm text-gray-500">Click on a record to view subject-specific analysis.</p>
-        </div>
+        <div className="px-6 py-4 border-b"><h2 className="text-xl font-semibold">Recent Activity</h2></div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm font-light">
-             <thead className="border-b bg-gray-100 font-medium">
-              <tr>
-                <th scope="col" className="px-6 py-4">Date</th>
-                <th scope="col" className="px-6 py-4">Time</th>
-                <th scope="col" className="px-6 py-4">Subject</th>
-              </tr>
-            </thead>
+             <thead className="border-b bg-gray-100 font-medium"><tr><th scope="col" className="px-6 py-4">Date & Time</th></tr></thead>
             <tbody>
-              {myAttendance.map((record) => (
-                <tr 
-                  key={record.id} 
-                  className="border-b transition duration-300 ease-in-out hover:bg-neutral-100 cursor-pointer"
-                  onClick={() => router.push(`/dashboard/my-subjects/${record.subjectId}`)}
-                >
-                  <td className="whitespace-nowrap px-6 py-4">{record.timestamp.toDate().toLocaleDateString()}</td>
-                  <td className="whitespace-nowrap px-6 py-4 font-medium">{record.timestamp.toDate().toLocaleTimeString()}</td>
-                  <td className="whitespace-nowrap px-6 py-4 font-semibold text-indigo-600">{subjectsMap[record.subjectId] || 'Loading...'}</td>
-                </tr>
+              {myAttendance.slice(0, 5).map((record) => (
+                <tr key={record.id} className="border-b"><td className="px-6 py-4">{record.timestamp.toDate().toLocaleString()}</td></tr>
               ))}
             </tbody>
           </table>
@@ -272,7 +230,6 @@ function StudentDashboard() {
     </section>
   );
 }
-
 
 // ===================================================================
 // ==                       MAIN PAGE COMPONENT                     ==
@@ -289,10 +246,8 @@ export default function DashboardPage() {
       case 'admin':
         return <AdminDashboard />;
       case 'professor':
-        // The ProfessorDashboard component needs to be defined here or imported
         return <ProfessorDashboard />; 
       case 'student':
-        // The StudentDashboard component needs to be defined here or imported
         return <StudentDashboard />;
       default:
         return <div>Unknown role. Please contact support.</div>;
@@ -308,3 +263,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

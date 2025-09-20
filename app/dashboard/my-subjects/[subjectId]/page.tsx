@@ -2,18 +2,14 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { db } from '../../../../lib/firebase';
-import { collection, query, where, onSnapshot, doc, getDoc, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, Timestamp, orderBy, limit } from 'firebase/firestore';
 import { useAuth } from '../../../../context/AuthContext';
 import AttendanceChart from '../../../../components/AttendanceChart';
 import Link from 'next/link';
 
 // Interfaces
 interface AttendanceRecord { id: string; timestamp: Timestamp; }
-interface SubjectDetails {
-  subjectName: string;
-  subjectCode: string;
-  isSessionActive?: boolean; // Add this line
-}
+interface SubjectDetails { subjectName: string; subjectCode: string; }
 
 export default function MySubjectDetailPage({ params: { subjectId } }: { params: { subjectId: string } }) {
   const { user } = useAuth();
@@ -21,66 +17,66 @@ export default function MySubjectDetailPage({ params: { subjectId } }: { params:
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [timePeriod, setTimePeriod] = useState('daily');
+  const [isSessionActive, setIsSessionActive] = useState(false); // NEW state for session status
 
   useEffect(() => {
     if (!user || !subjectId) return;
 
-    // Fetch subject details
-    getDoc(doc(db, 'subjects', subjectId)).then(docSnap => {
+    // Listener for subject details (name, code)
+    const subjectUnsubscribe = onSnapshot(doc(db, 'subjects', subjectId), (docSnap) => {
       if (docSnap.exists()) setSubjectDetails(docSnap.data() as SubjectDetails);
     });
 
-    // Listener for this student's attendance in this specific subject
-    const q = query(
+    // Listener for this student's attendance in this subject
+    const attendanceQuery = query(
       collection(db, 'attendance'),
       where('studentId', '==', user.uid),
       where('subjectId', '==', subjectId),
       orderBy('timestamp', 'desc')
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const attendanceUnsubscribe = onSnapshot(attendanceQuery, (snapshot) => {
       setAttendance(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord)));
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    // NEW: Listener for the active session, just like the professor's page
+    const sessionsQuery = query(
+      collection(db, 'subjects', subjectId, 'sessions'),
+      where('isActive', '==', true),
+      limit(1)
+    );
+    const sessionUnsubscribe = onSnapshot(sessionsQuery, (snapshot) => {
+      setIsSessionActive(!snapshot.empty); // If the query finds a document, a session is active
+    });
+
+    // Cleanup all listeners
+    return () => {
+      subjectUnsubscribe();
+      attendanceUnsubscribe();
+      sessionUnsubscribe();
+    };
   }, [user, subjectId]);
   
   const chartData = useMemo(() => {
     const counts: { [key: string]: number } = {};
-    
-    if (!attendance) return [];
-
     attendance.forEach(record => {
       const date = record.timestamp.toDate();
       let key = '';
-
       switch (timePeriod) {
         case 'weekly':
-          // Group by week number and year
           const weekStart = new Date(date.setDate(date.getDate() - date.getDay()));
           key = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           break;
         case 'monthly':
-          // Group by month and year
           key = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
           break;
-        case 'daily':
         default:
-          // Group by specific day
           key = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           break;
       }
-
-      if (counts[key]) {
-        counts[key]++;
-      } else {
-        counts[key] = 1;
-      }
+      if (counts[key]) counts[key]++; else counts[key] = 1;
     });
-
-    return Object.keys(counts).map(key => ({
-      date: key,
-      present: counts[key],
-    })).reverse();
+    return Object.keys(counts).map(key => ({ date: key, present: counts[key] })).reverse();
   }, [attendance, timePeriod]);
   
   if (loading) return <div>Loading subject analysis...</div>;
@@ -92,8 +88,8 @@ export default function MySubjectDetailPage({ params: { subjectId } }: { params:
           <h1 className="text-3xl font-bold">{subjectDetails?.subjectName}</h1>
           <p className="text-lg text-gray-600">{subjectDetails?.subjectCode} - My Attendance</p>
         </div>
-        {/* 👇 NEW: Conditionally render the check-in button */}
-        {subjectDetails?.isSessionActive && (
+        {/* FIX: Use the new isSessionActive state to render the button */}
+        {isSessionActive && (
           <Link href={`/dashboard/check-in/${subjectId}`}>
             <div className="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 animate-pulse">
               Mark My Attendance
@@ -132,3 +128,4 @@ export default function MySubjectDetailPage({ params: { subjectId } }: { params:
     </div>
   );
 }
+
