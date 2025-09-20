@@ -9,7 +9,6 @@ import * as faceapi from 'face-api.js';
 interface User { id: string; name: string; email: string; role: string; }
 
 export default function AdminUsersPage() {
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   

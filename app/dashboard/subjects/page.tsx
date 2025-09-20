@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent, useCallback } from 'react';
 import { db } from '../../../lib/firebase';
 import { collection, query, where, getDocs, addDoc, doc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '../../../context/AuthContext';
@@ -21,7 +21,7 @@ export default function SubjectsPage() {
   const [newSubjectCode, setNewSubjectCode] = useState('');
 
   // Function to fetch subjects
-  const fetchSubjects = async () => {
+  const fetchSubjects = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     const q = query(collection(db, 'subjects'), where('professorId', '==', user.uid));
@@ -29,11 +29,11 @@ export default function SubjectsPage() {
     const subjectsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
     setSubjects(subjectsList);
     setLoading(false);
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchSubjects();
-  }, [user]);
+  }, [fetchSubjects]);
 
   // Handle form submission to create a new subject
   const handleCreateSubject = async (e: FormEvent) => {
