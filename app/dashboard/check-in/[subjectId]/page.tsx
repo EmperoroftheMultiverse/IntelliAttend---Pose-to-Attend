@@ -127,6 +127,12 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
       return;
     }
 
+    const options = {
+      enableHighAccuracy: true,
+      timeout: 10000, // Wait 10 seconds
+      maximumAge: 0,
+    };
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const distance = getDistanceBetweenCoords(
@@ -141,8 +147,9 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
           setStatus(`Verification failed. You are ${Math.round(distance)} meters away from campus.`);
         }
       },
-      () => {
-        setStatus("Unable to retrieve location. Please enable location services.");
+      (error) => {
+        console.error("Geolocation Error:", error);
+        setStatus(`Location Error: ${error.message}`);
       }
     );
   };
