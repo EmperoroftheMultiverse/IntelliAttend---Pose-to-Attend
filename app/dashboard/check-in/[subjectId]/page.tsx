@@ -168,6 +168,8 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
         const rightEye = detections.landmarks.getRightEye();
         const averageEAR = (getEyeAspectRatio(leftEye) + getEyeAspectRatio(rightEye)) / 2.0;
 
+        console.log("Current EAR:", averageEAR.toFixed(2));
+
         if (averageEAR < EAR_THRESHOLD) {
             setLivenessCheckPassed(true);
             if (intervalRef.current) clearInterval(intervalRef.current);
