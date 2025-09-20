@@ -11,11 +11,11 @@ export default function ProfilePage() {
   const [faceDescriptor, setFaceDescriptor] = useState<Float32Array | null>(null);
   const [feedback, setFeedback] = useState('');
 
-  // Load face-api models when the component mounts
   useEffect(() => {
     const loadModels = async () => {
       const MODEL_URL = '/models';
       await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+      await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
       await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
     };
     loadModels();
@@ -28,7 +28,7 @@ export default function ProfilePage() {
         studentId: user.uid,
         studentName: userProfile.name,
         requestDate: serverTimestamp(),
-        status: 'pending', // Statuses: pending, approved, rejected, completed
+        status: 'pending',
       });
       alert('Your request has been submitted for review.');
     } catch (error) {
@@ -37,48 +37,39 @@ export default function ProfilePage() {
     }
   };
 
+  // 👇 THIS FUNCTION IS NOW OPTIMIZED
   const processImageForDescriptor = async (imageElement: HTMLImageElement) => {
     setFeedback("Processing new image...");
-    const detection = await faceapi.detectSingleFace(imageElement, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+
+    const canvas = document.createElement('canvas');
+    const MAX_WIDTH = 600;
+    const scale = MAX_WIDTH / imageElement.width;
+    canvas.width = MAX_WIDTH;
+    canvas.height = imageElement.height * scale;
+    const ctx = canvas.getContext('2d');
+    ctx?.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
+
+    const detection = await faceapi
+      .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    
     if (detection) {
       setFaceDescriptor(detection.descriptor);
       setFeedback("✅ New face encoding captured successfully! Click Save to confirm.");
     } else {
-      setFeedback("❌ No face detected. Please try again.");
+      setFeedback("❌ No face detected. Please try again with a clear photo.");
+      setFaceDescriptor(null);
     }
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const img = document.createElement('img');
-        img.onload = () => {
-            const MAX_WIDTH = 600;
-            // Resize image if it's too large
-            if (img.width > MAX_WIDTH) {
-                const canvas = document.createElement('canvas');
-                const scaleFactor = MAX_WIDTH / img.width;
-                canvas.width = MAX_WIDTH;
-                canvas.height = img.height * scaleFactor;
-                const ctx = canvas.getContext('2d');
-                ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-                
-                // Create a new image from the resized canvas
-                const resizedImg = document.createElement('img');
-                resizedImg.src = canvas.toDataURL('image/jpeg');
-                resizedImg.onload = () => processImageForDescriptor(resizedImg);
-            } else {
-                // Process the original image if it's small enough
-                processImageForDescriptor(img);
-            }
-        };
-        img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-};
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    img.onload = () => processImageForDescriptor(img);
+  };
 
   const handleSaveNewFace = async () => {
     if (!user || !faceDescriptor) {
@@ -89,17 +80,17 @@ export default function ProfilePage() {
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, {
         faceDescriptor: Array.from(faceDescriptor),
-        updateFaceAllowed: false, // Revoke permission after updating
+        updateFaceAllowed: false,
       });
       alert('Your face encoding has been updated successfully!');
       setFeedback('');
       setFaceDescriptor(null);
-      // Optionally, you can force a refresh of the userProfile in the AuthContext here
     } catch (error) {
       console.error("Error updating face encoding:", error);
       alert("Failed to update face encoding.");
     }
   };
+
 
   return (
     <div>
@@ -110,7 +101,6 @@ export default function ProfilePage() {
         <hr className="my-4"/>
         <h2 className="text-xl font-semibold mb-2">Face Encoding Management</h2>
 
-        {/* This entire section will only appear if the request was approved */}
         {userProfile?.updateFaceAllowed ? (
           <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
             <h3 className="font-bold text-green-800">Your request was approved!</h3>
