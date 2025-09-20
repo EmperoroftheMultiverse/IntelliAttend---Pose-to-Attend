@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import * as faceapi from 'face-api.js';
 import { useAuth } from '../../../../context/AuthContext';
 import { db } from '../../../../lib/firebase';
-import { doc, getDoc, addDoc, collection, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, addDoc, collection, query, where, getDocs, limit, Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
 // --- GEOLOCATION CONFIGURATION ---
@@ -50,6 +50,10 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
   const [livenessCheckPassed, setLivenessCheckPassed] = useState(false);
   const [geolocationPassed, setGeolocationPassed] = useState(false);
   const [recognitionPassed, setRecognitionPassed] = useState(false);
+  const [verificationStep, setVerificationStep] = useState('initial'); // initial, liveness, location, recognition
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
 
   useEffect(() => {
     const loadModels = async () => {
@@ -63,7 +67,19 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
       setStatus("Models loaded. Ready to start verification.");
     };
     loadModels();
-  }, []);
+
+  // Find the current active session for this subject
+    const sessionsQuery = query(
+      collection(db, 'subjects', subjectId, 'sessions'),
+      where('isActive', '==', true),
+      limit(1)
+    );
+    getDocs(sessionsQuery).then((snapshot) => {
+      if (!snapshot.empty) {
+        setActiveSessionId(snapshot.docs[0].id);
+      }
+    });
+  }, [subjectId]);
 
   const startCamera = async () => {
     setStatus("Requesting camera access...");
@@ -80,10 +96,29 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
   };
   
   const performFaceRecognition = async () => {
+    // --- LAYER 1: CLIENT-SIDE LOCK ---
+    if (isSubmitting) return; 
+    setIsSubmitting(true);
+
     setStatus("Verifying identity...");
-    if (!videoRef.current || !user || !userProfile) {
-      setStatus("Error: User data not found.");
+    if (!videoRef.current || !user || !userProfile || !activeSessionId) {
+      setStatus("Error: Prerequisite data is missing.");
+      setIsSubmitting(false);
       return;
+    }
+
+    // --- LAYER 2: DATABASE CHECK ---
+    const attendanceQuery = query(
+        collection(db, 'attendance'),
+        where('studentId', '==', user.uid),
+        where('sessionId', '==', activeSessionId)
+    );
+    const existingEntry = await getDocs(attendanceQuery);
+    if (!existingEntry.empty) {
+        setStatus("You have already been marked for this session.");
+        setIsSubmitting(false);
+        setTimeout(() => router.push('/dashboard'), 2000);
+        return;
     }
 
     const userDocSnap = await getDoc(doc(db, 'users', user.uid));
@@ -96,27 +131,28 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
     const storedDescriptor = new Float32Array(storedDescriptorArray);
 
     const detection = await faceapi.detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-    if (!detection) {
-      setStatus("Could not detect your face. Please try again.");
-      return;
-    }
+    if (detection) {
+        const faceMatcher = new faceapi.FaceMatcher([storedDescriptor]);
+        const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
 
-    const faceMatcher = new faceapi.FaceMatcher([storedDescriptor]);
-    const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
-
-    if (bestMatch.label === 'person 1' && bestMatch.distance < 0.5) {
-      setStatus("✅ Verification Successful! Marking you present.");
-      setRecognitionPassed(true);
-      await addDoc(collection(db, 'attendance'), {
-        studentId: user.uid,
-        studentName: userProfile.name,
-        subjectId: subjectId,
-        timestamp: Timestamp.now(),
-        date: new Date().toISOString().split('T')[0],
-      });
-      setTimeout(() => router.push('/dashboard'), 2000);
+        if (bestMatch.label === 'person 1' && bestMatch.distance < 0.5) {
+            setStatus("✅ Verification Successful! Marking you present.");
+            await addDoc(collection(db, 'attendance'), {
+                studentId: user.uid,
+                studentName: userProfile.name,
+                subjectId: subjectId,
+                sessionId: activeSessionId, // Add session ID for duplicate check
+                timestamp: Timestamp.now(),
+                date: new Date().toISOString().split('T')[0],
+            });
+            setTimeout(() => router.push('/dashboard'), 2000);
+        } else {
+            setStatus("❌ Face does not match registered profile. Please try again.");
+            setIsSubmitting(false);
+        }
     } else {
-      setStatus("❌ Face does not match registered profile. Please try again.");
+      setStatus("Could not detect your face. Please try again.");
+      setIsSubmitting(false);
     }
   };
 
