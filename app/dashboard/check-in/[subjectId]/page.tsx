@@ -163,12 +163,12 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
         canvasRef.current.getContext('2d')?.clearRect(0, 0, video.videoWidth, video.videoHeight);
         faceapi.draw.drawDetections(canvasRef.current, resizedDetections);
         
-        const EAR_THRESHOLD = 0.2;
+        const EAR_THRESHOLD = 0.27;
         const leftEye = detections.landmarks.getLeftEye();
         const rightEye = detections.landmarks.getRightEye();
         const averageEAR = (getEyeAspectRatio(leftEye) + getEyeAspectRatio(rightEye)) / 2.0;
 
-        console.log("Current EAR:", averageEAR.toFixed(2));
+        // console.log("Current EAR:", averageEAR.toFixed(2));
 
         if (averageEAR < EAR_THRESHOLD) {
             setLivenessCheckPassed(true);
