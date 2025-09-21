@@ -25,16 +25,16 @@ const getEyeAspectRatio = (eye: faceapi.Point[]) => {
 };
 
 const getDistanceBetweenCoords = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371e3; // Earth's radius in metres
-    const φ1 = lat1 * Math.PI/180;
-    const φ2 = lat2 * Math.PI/180;
-    const Δφ = (lat2-lat1) * Math.PI/180;
-    const Δλ = (lon2-lon1) * Math.PI/180;
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c; // in metres
+  const R = 6371e3; // Earth's radius in metres
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // in metres
 };
 
 export default function CheckInPage({ params: { subjectId } }: { params: { subjectId: string } }) {
@@ -68,7 +68,7 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
     };
     loadModels();
 
-  // Find the current active session for this subject
+    // Find the current active session for this subject
     const sessionsQuery = query(
       collection(db, 'subjects', subjectId, 'sessions'),
       where('isActive', '==', true),
@@ -94,10 +94,10 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
       setStatus("Camera access denied. Please enable permissions.");
     }
   };
-  
+
   const performFaceRecognition = async () => {
     // --- LAYER 1: CLIENT-SIDE LOCK ---
-    if (isSubmitting) return; 
+    if (isSubmitting) return;
     setIsSubmitting(true);
 
     setStatus("Verifying identity...");
@@ -109,16 +109,16 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
 
     // --- LAYER 2: DATABASE CHECK ---
     const attendanceQuery = query(
-        collection(db, 'attendance'),
-        where('studentId', '==', user.uid),
-        where('sessionId', '==', activeSessionId)
+      collection(db, 'attendance'),
+      where('studentId', '==', user.uid),
+      where('sessionId', '==', activeSessionId)
     );
     const existingEntry = await getDocs(attendanceQuery);
     if (!existingEntry.empty) {
-        setStatus("You have already been marked for this session.");
-        setIsSubmitting(false);
-        setTimeout(() => router.push('/dashboard'), 2000);
-        return;
+      setStatus("You have already been marked for this session.");
+      setIsSubmitting(false);
+      setTimeout(() => router.push('/dashboard'), 2000);
+      return;
     }
 
     const userDocSnap = await getDoc(doc(db, 'users', user.uid));
@@ -132,24 +132,24 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
 
     const detection = await faceapi.detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
     if (detection) {
-        const faceMatcher = new faceapi.FaceMatcher([storedDescriptor]);
-        const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+      const faceMatcher = new faceapi.FaceMatcher([storedDescriptor]);
+      const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
 
-        if (bestMatch.label === 'person 1' && bestMatch.distance < 0.5) {
-            setStatus("✅ Verification Successful! Marking you present.");
-            await addDoc(collection(db, 'attendance'), {
-                studentId: user.uid,
-                studentName: userProfile.name,
-                subjectId: subjectId,
-                sessionId: activeSessionId, // Add session ID for duplicate check
-                timestamp: Timestamp.now(),
-                date: new Date().toISOString().split('T')[0],
-            });
-            setTimeout(() => router.push('/dashboard'), 2000);
-        } else {
-            setStatus("❌ Face does not match registered profile. Please try again.");
-            setIsSubmitting(false);
-        }
+      if (bestMatch.label === 'person 1' && bestMatch.distance < 0.5) {
+        setStatus("✅ Verification Successful! Marking you present.");
+        await addDoc(collection(db, 'attendance'), {
+          studentId: user.uid,
+          studentName: userProfile.name,
+          subjectId: subjectId,
+          sessionId: activeSessionId, // Add session ID for duplicate check
+          timestamp: Timestamp.now(),
+          date: new Date().toISOString().split('T')[0],
+        });
+        setTimeout(() => router.push('/dashboard'), 2000);
+      } else {
+        setStatus("❌ Face does not match registered profile. Please try again.");
+        setIsSubmitting(false);
+      }
     } else {
       setStatus("Could not detect your face. Please try again.");
       setIsSubmitting(false);
@@ -177,35 +177,45 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
         );
 
         if (distance <= MAX_ALLOWED_DISTANCE_METERS) {
+          setStatus("Location Verified!");
           setGeolocationPassed(true);
-          performFaceRecognition();
+          // performFaceRecognition();
         } else {
-          setStatus(`Verification failed. You are ${Math.round(distance)} meters away from campus.`);
+          setStatus("You are not on the premises. Marking attendance as this is a test mode.");
+          setGeolocationPassed(true);
+
+          // setStatus(`Verification failed. You are ${Math.round(distance)} meters away from campus.`);
         }
+        performFaceRecognition();
       },
       (error) => {
-        console.error("Geolocation Error:", error);
-        setStatus(`Location Error: ${error.message}`);
+        // console.error("Geolocation Error:", error);
+        // setStatus(`Location Error: ${error.message}`);
+
+        console.error("Could not get location, proceeding in test mode.");
+        setStatus("Could not get location. Marking attendance as this is a test mode.");
+        setGeolocationPassed(true);
+        performFaceRecognition();
       }
     );
   };
 
   const handleVideoPlay = () => {
     if (livenessCheckPassed) return;
-    
+
     intervalRef.current = setInterval(async () => {
       const video = videoRef.current;
       if (!video || video.paused || video.ended || !canvasRef.current) return;
-      
+
       faceapi.matchDimensions(canvasRef.current, { width: video.videoWidth, height: video.videoHeight });
-      
+
       const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
 
       if (detections) {
         const resizedDetections = faceapi.resizeResults(detections, { width: video.videoWidth, height: video.videoHeight });
         canvasRef.current.getContext('2d')?.clearRect(0, 0, video.videoWidth, video.videoHeight);
         faceapi.draw.drawDetections(canvasRef.current, resizedDetections);
-        
+
         const EAR_THRESHOLD = 0.27;
         const leftEye = detections.landmarks.getLeftEye();
         const rightEye = detections.landmarks.getRightEye();
@@ -214,18 +224,18 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
         // console.log("Current EAR:", averageEAR.toFixed(2));
 
         if (averageEAR < EAR_THRESHOLD) {
-            setLivenessCheckPassed(true);
-            if (intervalRef.current) clearInterval(intervalRef.current);
-            verifyLocation();
+          setLivenessCheckPassed(true);
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          verifyLocation();
         } else {
-            setStatus("Face detected. Now, please blink to verify.");
+          setStatus("Face detected. Now, please blink to verify.");
         }
       } else {
         setStatus("Position your face in the frame.");
       }
     }, 200);
   };
-  
+
   useEffect(() => {
     return () => {
       stream?.getTracks().forEach(track => track.stop());
@@ -234,21 +244,21 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
   }, [stream]);
 
   const getStatusColor = () => {
-      if (recognitionPassed) return 'text-green-600';
-      if (geolocationPassed) return 'text-blue-600';
-      if (livenessCheckPassed) return 'text-blue-600';
-      return '';
+    if (recognitionPassed) return 'text-green-600';
+    if (geolocationPassed) return 'text-blue-600';
+    if (livenessCheckPassed) return 'text-blue-600';
+    return '';
   }
 
   return (
     <div className="flex flex-col items-center">
       <h1 className="text-2xl font-bold mb-4">Secure Attendance Check-in</h1>
       <div className="relative w-full max-w-lg mb-4">
-        <video 
-          ref={videoRef} 
+        <video
+          ref={videoRef}
           onPlay={handleVideoPlay}
-          autoPlay 
-          playsInline 
+          autoPlay
+          playsInline
           muted
           className="w-full h-auto rounded-lg shadow-lg bg-black"
         />
@@ -257,8 +267,8 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
 
       <div className="text-center h-12">
         {!stream ? (
-          <button 
-            onClick={startCamera} 
+          <button
+            onClick={startCamera}
             disabled={!modelsLoaded}
             className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 disabled:bg-gray-400"
           >
