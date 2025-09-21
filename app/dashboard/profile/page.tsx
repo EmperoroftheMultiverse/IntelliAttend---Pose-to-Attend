@@ -149,12 +149,12 @@ export default function ProfilePage() {
       <div className="bg-white p-6 rounded-lg shadow-md">
         <p className="mb-2"><strong>Name:</strong> {userProfile?.name}</p>
         <p className="mb-4"><strong>Email:</strong> {userProfile?.email}</p>
-        <hr className="my-4" />
-        <h2 className="text-xl font-semibold mb-2">Face Encoding Management</h2>
 
         {/* 👇 FIX: This entire section is now wrapped in a condition */}
         {userProfile?.role === 'student' && (
           <>
+            <hr className="my-4" />
+            <h2 className="text-xl font-semibold mb-2">Face Encoding Management</h2>
             <hr className="my-4" />
             <h2 className="text-xl font-semibold mb-2">Face Encoding Management</h2>
 
