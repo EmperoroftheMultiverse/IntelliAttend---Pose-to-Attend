@@ -3,7 +3,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { db, auth } from '../../../lib/firebase';
-import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { updatePassword } from 'firebase/auth';
 import * as faceapi from 'face-api.js';
 
@@ -11,6 +11,7 @@ export default function ProfilePage() {
   const { user, userProfile } = useAuth();
   const [faceDescriptor, setFaceDescriptor] = useState<Float32Array | null>(null);
   const [feedback, setFeedback] = useState('');
+  const [isRequestPending, setIsRequestPending] = useState(false); 
 
   // NEW: State for Password Change
   const [newPassword, setNewPassword] = useState('');
@@ -26,6 +27,23 @@ export default function ProfilePage() {
     };
     loadModels();
   }, []);
+
+  // 👇 NEW: useEffect to check for pending grievances
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'grievances'),
+      where('studentId', '==', user.uid),
+      where('status', '==', 'pending')
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setIsRequestPending(!snapshot.empty); // Set to true if a pending request exists
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   const handleRequestUpdate = async () => {
     if (!user || !userProfile) return;
@@ -159,8 +177,12 @@ export default function ProfilePage() {
             <p className="text-sm text-gray-600 mb-4">
               If your appearance has changed, you can request to update your registered face photo.
             </p>
-            <button onClick={handleRequestUpdate} className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700">
-              Request Face Update
+            <button 
+              onClick={handleRequestUpdate} 
+              disabled={isRequestPending} // 👈 Disable the button if a request is pending
+              className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {isRequestPending ? 'Request Pending...' : 'Request Face Update'}
             </button>
           </div>
         )}
