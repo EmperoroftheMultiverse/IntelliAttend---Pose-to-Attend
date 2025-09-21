@@ -19,6 +19,7 @@ export default function SubjectsPage() {
   const [showModal, setShowModal] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState('');
   const [newSubjectCode, setNewSubjectCode] = useState('');
+  const [newSubjectYear, setNewSubjectYear] = useState(1);
 
   // Function to fetch subjects
   const fetchSubjects = useCallback(async () => {
@@ -45,11 +46,13 @@ export default function SubjectsPage() {
         subjectName: newSubjectName,
         subjectCode: newSubjectCode,
         professorId: user.uid,
+        year: newSubjectYear,
       });
       // Reset form and close modal
       setShowModal(false);
       setNewSubjectName('');
       setNewSubjectCode('');
+      setNewSubjectYear(1)
       // Refresh the list of subjects
       fetchSubjects();
     } catch (error) {
@@ -110,6 +113,15 @@ export default function SubjectsPage() {
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700">Subject Code</label>
                 <input type="text" value={newSubjectCode} onChange={(e) => setNewSubjectCode(e.target.value)} className="w-full mt-1 p-2 border rounded-md" required />
+              </div>
+              <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700">Year</label>
+                  <select value={newSubjectYear} onChange={(e) => setNewSubjectYear(Number(e.target.value))} className="w-full mt-1 p-2 border rounded-md" required>
+                      <option value={1}>Year 1</option>
+                      <option value={2}>Year 2</option>
+                      <option value={3}>Year 3</option>
+                      <option value={4}>Year 4</option>
+                  </select>
               </div>
               <div className="flex justify-end space-x-4">
                 <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 bg-gray-200 rounded-lg">Cancel</button>

@@ -22,6 +22,7 @@ export default function Sidebar() {
   ];
   const studentLinks = [
     { name: 'My Dashboard', href: '/dashboard' },
+    { name: 'Subjects', href: '/dashboard/student-subjects' },
     { name: 'My Profile', href: '/dashboard/profile' }
   ];
 

@@ -75,21 +75,42 @@ function ProfessorDashboard() {
   useEffect(() => {
     if (!user) return;
 
-    const fetchSubjectCount = async () => {
-      const q = query(collection(db, 'subjects'), where('professorId', '==', user.uid));
-      const querySnapshot = await getDocs(q);
-      setSubjectCount(querySnapshot.size);
+    const fetchData = async () => {
+      setLoading(true);
+
+      // 1. Fetch the professor's subjects first
+      const subjectsQuery = query(collection(db, 'subjects'), where('professorId', '==', user.uid));
+      const subjectsSnapshot = await getDocs(subjectsQuery);
+      setSubjectCount(subjectsSnapshot.size);
+      
+      const subjectIds = subjectsSnapshot.docs.map(doc => doc.id);
+
+      // 2. If the professor has subjects, fetch attendance only for those subjects
+      if (subjectIds.length > 0) {
+        const attendanceQuery = query(collection(db, 'attendance'), where('subjectId', 'in', subjectIds), orderBy('timestamp', 'desc'));
+        
+        // Use onSnapshot to keep it real-time
+        const unsubscribe = onSnapshot(attendanceQuery, (snapshot) => {
+          const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord));
+          setAttendance(records);
+          setLoading(false);
+        });
+        return unsubscribe; // Return the cleanup function
+      } else {
+        // If the professor has no subjects, there's no attendance to fetch
+        setAttendance([]);
+        setLoading(false);
+      }
     };
-    fetchSubjectCount();
 
-    const q_attendance = query(collection(db, 'attendance'), orderBy('timestamp', 'desc'));
-    const unsubscribe = onSnapshot(q_attendance, (querySnapshot) => {
-      const records = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord));
-      setAttendance(records);
-      setLoading(false);
-    });
+    const unsubscribe = fetchData();
 
-    return () => unsubscribe();
+    return () => {
+      // Cleanup the subscription if it was created
+      unsubscribe.then(unsub => {
+        if (unsub) unsub();
+      });
+    };
   }, [user]);
 
   const chartData = useMemo(() => {

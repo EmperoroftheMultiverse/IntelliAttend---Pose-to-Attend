@@ -9,6 +9,7 @@ interface UserProfile {
   email: string;
   role: 'student' | 'professor' | 'admin';
   updateFaceAllowed?: boolean; 
+  year?: number; 
 }
 
 interface AuthContextType {
