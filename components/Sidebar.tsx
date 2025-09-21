@@ -12,18 +12,20 @@ export default function Sidebar() {
     { name: 'Dashboard', href: '/dashboard' },
     { name: 'All Subjects', href: '/dashboard/admin/subjects' },
     { name: 'All Users', href: '/dashboard/admin/users' },
-    { name: 'Grievances', href: '/dashboard/grievances' }
+    { name: 'My Profile', href: '/dashboard/profile' },
+    { name: 'Grievances', href: '/dashboard/grievances' },
   ];
   const professorLinks = [
     { name: 'Dashboard', href: '/dashboard' },
     { name: 'My Subjects', href: '/dashboard/subjects' },
     { name: 'Students', href: '/dashboard/students' },
-    { name: 'Grievances', href: '/dashboard/grievances' }
+    { name: 'My Profile', href: '/dashboard/profile' },
+    { name: 'Grievances', href: '/dashboard/grievances' },
   ];
   const studentLinks = [
     { name: 'My Dashboard', href: '/dashboard' },
     { name: 'Subjects', href: '/dashboard/student-subjects' },
-    { name: 'My Profile', href: '/dashboard/profile' }
+    { name: 'My Profile', href: '/dashboard/profile' },
   ];
 
   // Determine which links to show based on the user's role

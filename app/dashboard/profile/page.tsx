@@ -1,15 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { db } from '../../../lib/firebase';
+import { db, auth } from '../../../lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { updatePassword } from 'firebase/auth';
 import * as faceapi from 'face-api.js';
 
 export default function ProfilePage() {
   const { user, userProfile } = useAuth();
   const [faceDescriptor, setFaceDescriptor] = useState<Float32Array | null>(null);
   const [feedback, setFeedback] = useState('');
+
+  // NEW: State for Password Change
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordFeedback, setPasswordFeedback] = useState('');
 
   useEffect(() => {
     const loadModels = async () => {
@@ -91,6 +97,34 @@ export default function ProfilePage() {
     }
   };
 
+  // NEW: Function to handle password change
+  const handleChangePassword = async (e: FormEvent) => {
+    e.preventDefault();
+    setPasswordFeedback('');
+
+    if (!user) {
+      setPasswordFeedback('Error: Not logged in.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordFeedback('Error: Passwords do not match.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordFeedback('Error: Password must be at least 6 characters long.');
+      return;
+    }
+
+    try {
+      await updatePassword(user, newPassword);
+      setPasswordFeedback('✅ Password updated successfully!');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      console.error("Error updating password:", error);
+      setPasswordFeedback('Error: Could not update password. You may need to log out and log back in to perform this action.');
+    }
+  };
 
   return (
     <div>
@@ -130,6 +164,40 @@ export default function ProfilePage() {
             </button>
           </div>
         )}
+      </div>
+      {/* NEW: Change Password Card */}
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-xl font-semibold mb-4">Change Password</h2>
+        <form onSubmit={handleChangePassword}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700">New Password</label>
+            <input 
+              type="password" 
+              value={newPassword} 
+              onChange={(e) => setNewPassword(e.target.value)} 
+              className="w-full mt-1 p-2 border rounded-md" 
+              required 
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700">Confirm New Password</label>
+            <input 
+              type="password" 
+              value={confirmPassword} 
+              onChange={(e) => setConfirmPassword(e.target.value)} 
+              className="w-full mt-1 p-2 border rounded-md" 
+              required 
+            />
+          </div>
+          <button type="submit" className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700">
+            Update Password
+          </button>
+          {passwordFeedback && (
+            <p className={`mt-2 text-sm font-semibold ${passwordFeedback.includes('✅') ? 'text-green-600' : 'text-red-600'}`}>
+              {passwordFeedback}
+            </p>
+          )}
+        </form>
       </div>
     </div>
   );
