@@ -17,6 +17,6 @@ A multi-role, AI-powered attendance system with secure, on-device face recogniti
 - [x] Students should have a subjects tab in their sidebar where all the subjects, which are tagged for year corresponding to them is visible 
 - [x] Professors can’t see their dashboard contents when session is active
 - [x] Admins can’t start sessions
-- [ ] Repetition of face update request line
+- [x] Repetition of face update request line
 - [x] Update request button not greying out
 - [x] Not logging out effectively
