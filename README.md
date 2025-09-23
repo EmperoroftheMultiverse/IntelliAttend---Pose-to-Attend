@@ -19,4 +19,4 @@ A multi-role, AI-powered attendance system with secure, on-device face recogniti
 - [x] Admins can’t start sessions
 - [ ] Repetition of face update request line
 - [x] Update request button not greying out
-- [x] Not logging out effectively
+- [x] Not logging out effectively 
