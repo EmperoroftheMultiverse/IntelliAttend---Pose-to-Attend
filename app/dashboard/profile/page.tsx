@@ -155,8 +155,6 @@ export default function ProfilePage() {
           <>
             <hr className="my-4" />
             <h2 className="text-xl font-semibold mb-2">Face Encoding Management</h2>
-            <hr className="my-4" />
-            <h2 className="text-xl font-semibold mb-2">Face Encoding Management</h2>
 
             {userProfile?.updateFaceAllowed ? (
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
