@@ -203,12 +203,15 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
   const handleVideoPlay = () => {
     if (livenessCheckPassed) return;
 
+    let eyeBlinked = false;
+    let eyeInitiallyOpen = false;
+
     intervalRef.current = setInterval(async () => {
       const video = videoRef.current;
-      if (!video || video.paused || video.ended || !canvasRef.current) return;
+      if (!video || video.paused || video.ended || !canvasRef.current || eyeBlinked) return;
 
       faceapi.matchDimensions(canvasRef.current, { width: video.videoWidth, height: video.videoHeight });
-
+      
       const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
 
       if (detections) {
@@ -216,21 +219,29 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
         canvasRef.current.getContext('2d')?.clearRect(0, 0, video.videoWidth, video.videoHeight);
         faceapi.draw.drawDetections(canvasRef.current, resizedDetections);
 
-        const EAR_THRESHOLD = 0.27;
+        const EAR_THRESHOLD = 0.22; // Threshold for a blink
+        const EAR_OPEN_THRESHOLD = 0.28; // Threshold to confirm eyes were open first
+        
         const leftEye = detections.landmarks.getLeftEye();
         const rightEye = detections.landmarks.getRightEye();
         const averageEAR = (getEyeAspectRatio(leftEye) + getEyeAspectRatio(rightEye)) / 2.0;
 
-        // console.log("Current EAR:", averageEAR.toFixed(2));
-
-        if (averageEAR < EAR_THRESHOLD) {
-          setLivenessCheckPassed(true);
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          verifyLocation();
-        } else {
+        // Step 1: Confirm eyes are open first
+        if (averageEAR > EAR_OPEN_THRESHOLD) {
+          eyeInitiallyOpen = true;
           setStatus("Face detected. Now, please blink to verify.");
         }
+
+        // Step 2: If eyes were open, now look for them to close
+        if (eyeInitiallyOpen && averageEAR < EAR_THRESHOLD) {
+          eyeBlinked = true; // Lock the state
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          
+          setLivenessCheckPassed(true);
+          verifyLocation();
+        }
       } else {
+        eyeInitiallyOpen = false; // Reset if face is lost
         setStatus("Position your face in the frame.");
       }
     }, 200);
