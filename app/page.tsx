@@ -60,7 +60,7 @@ export default function HomePage() {
           {/* Right Column: Image Graphic */}
           <div className="relative flex justify-center items-center">
             <Image 
-              src="image.jpeg" // IMPORTANT: Make sure this path is correct!
+              src="/image.jpeg" // IMPORTANT: Make sure this path is correct!
               alt="AI powered face recognition wireframe graphic"
               width={600}
               height={600}
