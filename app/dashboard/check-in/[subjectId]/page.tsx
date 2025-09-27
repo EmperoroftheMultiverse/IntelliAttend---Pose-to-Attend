@@ -38,7 +38,7 @@ const getDistanceBetweenCoords = (lat1: number, lon1: number, lat2: number, lon2
 };
 
 export default function CheckInPage({ params: { subjectId } }: { params: { subjectId: string } }) {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, instituteId } = useAuth();
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -56,6 +56,7 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
 
 
   useEffect(() => {
+    if (!instituteId) return;
     const loadModels = async () => {
       const MODEL_URL = '/models';
       await Promise.all([
@@ -70,7 +71,7 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
 
     // Find the current active session for this subject
     const sessionsQuery = query(
-      collection(db, 'subjects', subjectId, 'sessions'),
+      collection(db, 'institutes', instituteId, 'subjects', subjectId, 'sessions'),
       where('isActive', '==', true),
       limit(1)
     );
@@ -79,7 +80,7 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
         setActiveSessionId(snapshot.docs[0].id);
       }
     });
-  }, [subjectId]);
+  }, [subjectId, instituteId]);
 
   const startCamera = async () => {
     setStatus("Requesting camera access...");
@@ -97,7 +98,7 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
 
   const performFaceRecognition = async () => {
     // --- LAYER 1: CLIENT-SIDE LOCK ---
-    if (isSubmitting) return;
+    if (isSubmitting || !instituteId) return;
     setIsSubmitting(true);
 
     setStatus("Verifying identity...");
@@ -109,7 +110,7 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
 
     // --- LAYER 2: DATABASE CHECK ---
     const attendanceQuery = query(
-      collection(db, 'attendance'),
+      collection(db, 'institutes', instituteId, 'attendance'),
       where('studentId', '==', user.uid),
       where('sessionId', '==', activeSessionId)
     );
@@ -121,7 +122,7 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
       return;
     }
 
-    const userDocSnap = await getDoc(doc(db, 'users', user.uid));
+    const userDocSnap = await getDoc(doc(db, 'institutes', instituteId, 'users', user.uid));
     const storedDescriptorArray = userDocSnap.data()?.faceDescriptor;
 
     if (!storedDescriptorArray || storedDescriptorArray.length === 0) {
@@ -137,7 +138,7 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
 
       if (bestMatch.label === 'person 1' && bestMatch.distance < 0.5) {
         setStatus("✅ Verification Successful! Marking you present.");
-        await addDoc(collection(db, 'attendance'), {
+        await addDoc(collection(db, 'institutes', instituteId, 'attendance'), {
           studentId: user.uid,
           studentName: userProfile.name,
           subjectId: subjectId,

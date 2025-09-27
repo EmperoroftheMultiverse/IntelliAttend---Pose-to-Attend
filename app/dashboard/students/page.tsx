@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../../../lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import Link from 'next/link';
+import { useAuth } from '../../../context/AuthContext';
 
 interface Student {
   id: string; // This will be the user's UID
@@ -12,27 +13,29 @@ interface Student {
 }
 
 export default function StudentsPage() {
+  const { instituteId } = useAuth()
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!instituteId) return;
     const fetchStudents = async () => {
       setLoading(true);
       // Query to get all documents from the 'users' collection where the role is 'student'
-      const q = query(collection(db, 'users'), where('role', '==', 'student'));
-      
+      const q = query(collection(db, 'institutes', instituteId, 'users'), where('role', '==', 'student'));
+
       const querySnapshot = await getDocs(q);
       const studentsList: Student[] = [];
       querySnapshot.forEach((doc) => {
         studentsList.push({ id: doc.id, ...doc.data() } as Student);
       });
-      
+
       setStudents(studentsList);
       setLoading(false);
     };
 
     fetchStudents();
-  }, []);
+  }, [instituteId]);
 
   if (loading) {
     return <div>Loading student list...</div>;

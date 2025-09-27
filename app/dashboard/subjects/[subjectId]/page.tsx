@@ -18,6 +18,7 @@ import {
   limit
 } from 'firebase/firestore';
 import AttendanceChart from '../../../../components/AttendanceChart';
+import { useAuth } from '../../../../context/AuthContext';
 
 // TypeScript Interfaces for our data structures
 interface AttendanceRecord {
@@ -37,11 +38,12 @@ interface Student {
 }
 
 export default function SubjectDetailPage({ params: { subjectId } }: { params: { subjectId: string } }) {
+  const { instituteId } = useAuth();
   const [subjectDetails, setSubjectDetails] = useState<SubjectDetails | null>(null);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [timePeriod, setTimePeriod] = useState('daily');
-  
+
   // State for the "Add Entry" modal
   const [showModal, setShowModal] = useState(false);
   const [studentList, setStudentList] = useState<Student[]>([]);
@@ -54,8 +56,9 @@ export default function SubjectDetailPage({ params: { subjectId } }: { params: {
 
   // --- Functions for Session Control (New Model) ---
   const startSession = async () => {
+    if (!instituteId) return;
     // Create a new session document in the subcollection
-    await addDoc(collection(db, 'subjects', subjectId, 'sessions'), {
+    await addDoc(collection(db, 'institutes', instituteId, 'subjects', subjectId, 'sessions'), {
       isActive: true,
       year: selectedYear,
       startTime: Timestamp.now(),
@@ -63,8 +66,9 @@ export default function SubjectDetailPage({ params: { subjectId } }: { params: {
   };
 
   const stopSession = async () => {
+    if (!instituteId) return;
     if (activeSession) {
-      const sessionRef = doc(db, 'subjects', subjectId, 'sessions', activeSession.id);
+      const sessionRef = doc(db, 'institutes', instituteId, 'subjects', subjectId, 'sessions', activeSession.id);
       await updateDoc(sessionRef, {
         isActive: false,
         endTime: Timestamp.now(),
@@ -74,12 +78,14 @@ export default function SubjectDetailPage({ params: { subjectId } }: { params: {
 
   // --- Functions for Manual Editing ---
   const handleDeleteEntry = async (recordId: string) => {
+    if (!instituteId) return;
     if (confirm('Are you sure you want to delete this attendance record?')) {
-      await deleteDoc(doc(db, 'attendance', recordId));
+      await deleteDoc(doc(db, 'institutes', instituteId, 'attendance', recordId));
     }
   };
 
   const handleAddEntry = async (e: FormEvent) => {
+    if (!instituteId) return;
     e.preventDefault();
     if (!selectedStudent || !entryTimestamp) {
       alert('Please select a student and a timestamp.');
@@ -90,8 +96,8 @@ export default function SubjectDetailPage({ params: { subjectId } }: { params: {
     if (!student) return;
 
     const timestamp = new Date(entryTimestamp);
-    
-    await addDoc(collection(db, 'attendance'), {
+
+    await addDoc(collection(db, 'institutes', instituteId, 'attendance'), {
       studentId: student.id,
       studentName: student.name,
       subjectId: subjectId,
@@ -106,30 +112,31 @@ export default function SubjectDetailPage({ params: { subjectId } }: { params: {
 
   // --- Main Data Fetching and Real-time Listeners ---
   useEffect(() => {
+    if (!instituteId) return;
     if (!subjectId) return;
     setLoading(true);
 
     const fetchStudents = async () => {
-      const q = query(collection(db, 'users'), where('role', '==', 'student'));
+      const q = query(collection(db, 'institutes', instituteId, 'users'), where('role', '==', 'student'));
       const querySnapshot = await getDocs(q);
       setStudentList(querySnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name } as Student)));
     };
     fetchStudents();
-    
-    const subjectDocRef = doc(db, 'subjects', subjectId);
+
+    const subjectDocRef = doc(db, 'institutes', instituteId, 'subjects', subjectId);
     const subjectUnsubscribe = onSnapshot(subjectDocRef, (doc) => {
-        if (doc.exists()) {
-            setSubjectDetails(doc.data() as SubjectDetails);
-        }
+      if (doc.exists()) {
+        setSubjectDetails(doc.data() as SubjectDetails);
+      }
     });
 
-    const attendanceQuery = query(collection(db, 'attendance'), where('subjectId', '==', subjectId), orderBy('timestamp', 'desc'));
+    const attendanceQuery = query(collection(db, 'institutes', instituteId, 'attendance'), where('subjectId', '==', subjectId), orderBy('timestamp', 'desc'));
     const attendanceUnsubscribe = onSnapshot(attendanceQuery, (snapshot) => {
-        setAttendance(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord)));
-        setLoading(false);
+      setAttendance(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord)));
+      setLoading(false);
     });
 
-    const sessionsQuery = query(collection(db, 'subjects', subjectId, 'sessions'), where('isActive', '==', true), limit(1));
+    const sessionsQuery = query(collection(db, 'institutes', instituteId, 'subjects', subjectId, 'sessions'), where('isActive', '==', true), limit(1));
     const sessionUnsubscribe = onSnapshot(sessionsQuery, (snapshot) => {
       if (!snapshot.empty) {
         const sessionDoc = snapshot.docs[0];
@@ -191,8 +198,8 @@ export default function SubjectDetailPage({ params: { subjectId } }: { params: {
             </>
           ) : (
             <>
-              <select 
-                value={selectedYear} 
+              <select
+                value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
                 className="p-2 border rounded-md"
               >
@@ -214,12 +221,12 @@ export default function SubjectDetailPage({ params: { subjectId } }: { params: {
 
       <div className="my-6 bg-white p-6 rounded-lg shadow-md">
         <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold text-gray-700">Attendance Trend</h3>
-            <div className="flex space-x-2">
-                <button onClick={() => setTimePeriod('daily')} className={`px-3 py-1 text-sm rounded-md ${timePeriod === 'daily' ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}>Daily</button>
-                <button onClick={() => setTimePeriod('weekly')} className={`px-3 py-1 text-sm rounded-md ${timePeriod === 'weekly' ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}>Weekly</button>
-                <button onClick={() => setTimePeriod('monthly')} className={`px-3 py-1 text-sm rounded-md ${timePeriod === 'monthly' ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}>Monthly</button>
-            </div>
+          <h3 className="font-semibold text-gray-700">Attendance Trend</h3>
+          <div className="flex space-x-2">
+            <button onClick={() => setTimePeriod('daily')} className={`px-3 py-1 text-sm rounded-md ${timePeriod === 'daily' ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}>Daily</button>
+            <button onClick={() => setTimePeriod('weekly')} className={`px-3 py-1 text-sm rounded-md ${timePeriod === 'weekly' ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}>Weekly</button>
+            <button onClick={() => setTimePeriod('monthly')} className={`px-3 py-1 text-sm rounded-md ${timePeriod === 'monthly' ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}>Monthly</button>
+          </div>
         </div>
         <AttendanceChart data={chartData} />
       </div>
@@ -228,7 +235,7 @@ export default function SubjectDetailPage({ params: { subjectId } }: { params: {
         <div className="px-6 py-4 border-b"><h2 className="text-xl font-semibold">Full Attendance Log</h2></div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm font-light">
-             <thead className="border-b bg-gray-100 font-medium">
+            <thead className="border-b bg-gray-100 font-medium">
               <tr>
                 <th scope="col" className="px-6 py-4">Student Name</th>
                 <th scope="col" className="px-6 py-4">Date & Time</th>

@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "facerecognitionattendanc-bf636"
-  }
+    "default": "intelliattend-1a097"
+  },
+  "targets": {},
+  "etags": {}
 }

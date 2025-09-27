@@ -8,7 +8,7 @@ import { updatePassword } from 'firebase/auth';
 import * as faceapi from 'face-api.js';
 
 export default function ProfilePage() {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, instituteId } = useAuth();
   const [faceDescriptor, setFaceDescriptor] = useState<Float32Array | null>(null);
   const [feedback, setFeedback] = useState('');
   const [isRequestPending, setIsRequestPending] = useState(false);
@@ -30,10 +30,11 @@ export default function ProfilePage() {
 
   // 👇 NEW: useEffect to check for pending grievances
   useEffect(() => {
+    if (!instituteId) return;
     // Only run this check for students
     if (user && userProfile?.role === 'student') {
       const q = query(
-        collection(db, 'grievances'),
+        collection(db, 'institutes', instituteId, 'grievances'),
         where('studentId', '==', user.uid),
         where('status', '==', 'pending')
       );
@@ -42,12 +43,12 @@ export default function ProfilePage() {
       });
       return () => unsubscribe();
     }
-  }, [user, userProfile]);
+  }, [user, userProfile, instituteId]);
 
   const handleRequestUpdate = async () => {
-    if (!user || !userProfile) return;
+    if (!user || !userProfile || !instituteId) return;
     try {
-      await addDoc(collection(db, 'grievances'), {
+      await addDoc(collection(db, 'institutes', instituteId, 'grievances'), {
         studentId: user.uid,
         studentName: userProfile.name,
         requestDate: serverTimestamp(),
@@ -95,12 +96,13 @@ export default function ProfilePage() {
   };
 
   const handleSaveNewFace = async () => {
+    if (!instituteId) return;
     if (!user || !faceDescriptor) {
       alert("No new face encoding has been captured.");
       return;
     }
     try {
-      const userRef = doc(db, 'users', user.uid);
+      const userRef = doc(db, 'institutes', instituteId, 'users', user.uid);
       await updateDoc(userRef, {
         faceDescriptor: Array.from(faceDescriptor),
         updateFaceAllowed: false,

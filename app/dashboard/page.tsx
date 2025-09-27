@@ -29,15 +29,17 @@ interface Subject {
 // ==                   ADMIN DASHBOARD COMPONENT                   ==
 // ===================================================================
 function AdminDashboard() {
+  const { instituteId } = useAuth(); // 👈 Get the instituteId from context
   const [stats, setStats] = useState({ userCount: 0, subjectCount: 0, attendanceToday: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!instituteId) return; 
     const fetchAdminStats = async () => {
-      const usersSnapshot = await getDocs(collection(db, 'users'));
-      const subjectsSnapshot = await getDocs(collection(db, 'subjects'));
+      const usersSnapshot = await getDocs(collection(db, 'institutes', instituteId, 'users'));
+      const subjectsSnapshot = await getDocs(collection(db, 'institutes', instituteId, 'subjects'));
       const today = new Date().toISOString().split('T')[0];
-      const attendanceQuery = query(collection(db, 'attendance'), where('date', '==', today));
+      const attendanceQuery = query(collection(db, 'institutes', instituteId, 'attendance'), where('date', '==', today));
       const attendanceSnapshot = await getDocs(attendanceQuery);
       
       setStats({
@@ -49,7 +51,7 @@ function AdminDashboard() {
     };
     
     fetchAdminStats();
-  }, []);
+  }, [instituteId]);
 
   if (loading) return <div>Loading Admin Dashboard...</div>;
 
@@ -66,20 +68,20 @@ function AdminDashboard() {
 // ==                  PROFESSOR DASHBOARD COMPONENT                ==
 // ===================================================================
 function ProfessorDashboard() {
-  const { user } = useAuth();
+  const { user, instituteId } = useAuth(); // 👈 Get the instituteId from context
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [subjectCount, setSubjectCount] = useState(0);
   const [timePeriod, setTimePeriod] = useState('daily');
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !instituteId) return;
 
     const fetchData = async () => {
       setLoading(true);
 
       // 1. Fetch the professor's subjects first
-      const subjectsQuery = query(collection(db, 'subjects'), where('professorId', '==', user.uid));
+      const subjectsQuery = query(collection(db, 'institutes', instituteId, 'subjects'), where('professorId', '==', user.uid));
       const subjectsSnapshot = await getDocs(subjectsQuery);
       setSubjectCount(subjectsSnapshot.size);
       
@@ -87,7 +89,7 @@ function ProfessorDashboard() {
 
       // 2. If the professor has subjects, fetch attendance only for those subjects
       if (subjectIds.length > 0) {
-        const attendanceQuery = query(collection(db, 'attendance'), where('subjectId', 'in', subjectIds), orderBy('timestamp', 'desc'));
+        const attendanceQuery = query(collection(db, 'institutes', instituteId, 'attendance'), where('subjectId', 'in', subjectIds), orderBy('timestamp', 'desc'));
         
         // Use onSnapshot to keep it real-time
         const unsubscribe = onSnapshot(attendanceQuery, (snapshot) => {
@@ -111,7 +113,7 @@ function ProfessorDashboard() {
         if (unsub) unsub();
       });
     };
-  }, [user]);
+  }, [user, instituteId]);
 
   const chartData = useMemo(() => {
     const counts: { [key: string]: number } = {};
@@ -184,16 +186,16 @@ function ProfessorDashboard() {
 // ==                   STUDENT DASHBOARD COMPONENT                 ==
 // ===================================================================
 function StudentDashboard() {
-  const { user } = useAuth();
+  const { user, instituteId } = useAuth();
   const router = useRouter();
   const [myAttendance, setMyAttendance] = useState<AttendanceRecord[]>([]);
   const [mySubjects, setMySubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !instituteId) return;
 
-    const q = query(collection(db, 'attendance'), where('studentId', '==', user.uid));
+    const q = query(collection(db, 'institutes', instituteId, 'attendance'), where('studentId', '==', user.uid));
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const records = snapshot.docs.map(doc => doc.data() as AttendanceRecord);
       setMyAttendance(records);
@@ -201,7 +203,7 @@ function StudentDashboard() {
       const uniqueSubjectIds = [...new Set(records.map(rec => rec.subjectId))];
       
       if (uniqueSubjectIds.length > 0) {
-        const subjectsQuery = query(collection(db, 'subjects'), where(documentId(), 'in', uniqueSubjectIds));
+        const subjectsQuery = query(collection(db, 'institutes', instituteId, 'subjects'), where(documentId(), 'in', uniqueSubjectIds));
         const subjectsSnapshot = await getDocs(subjectsQuery);
         const subjectsList = subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
         setMySubjects(subjectsList);
@@ -210,7 +212,7 @@ function StudentDashboard() {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, instituteId]);
 
   if (loading) return <div>Loading Your Dashboard...</div>;
 

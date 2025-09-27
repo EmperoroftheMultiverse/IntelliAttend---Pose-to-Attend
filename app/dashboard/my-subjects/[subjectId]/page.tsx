@@ -12,7 +12,7 @@ interface AttendanceRecord { id: string; timestamp: Timestamp; }
 interface SubjectDetails { subjectName: string; subjectCode: string; }
 
 export default function MySubjectDetailPage({ params: { subjectId } }: { params: { subjectId: string } }) {
-  const { user } = useAuth();
+  const { user, instituteId } = useAuth();
   const [subjectDetails, setSubjectDetails] = useState<SubjectDetails | null>(null);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,16 +20,16 @@ export default function MySubjectDetailPage({ params: { subjectId } }: { params:
   const [isSessionActive, setIsSessionActive] = useState(false); // NEW state for session status
 
   useEffect(() => {
-    if (!user || !subjectId) return;
+    if (!user || !subjectId || !instituteId) return;
 
     // Listener for subject details (name, code)
-    const subjectUnsubscribe = onSnapshot(doc(db, 'subjects', subjectId), (docSnap) => {
+    const subjectUnsubscribe = onSnapshot(doc(db, 'institutes', instituteId, 'subjects', subjectId), (docSnap) => {
       if (docSnap.exists()) setSubjectDetails(docSnap.data() as SubjectDetails);
     });
 
     // Listener for this student's attendance in this subject
     const attendanceQuery = query(
-      collection(db, 'attendance'),
+      collection(db, 'institutes', instituteId, 'attendance'),
       where('studentId', '==', user.uid),
       where('subjectId', '==', subjectId),
       orderBy('timestamp', 'desc')
@@ -41,7 +41,7 @@ export default function MySubjectDetailPage({ params: { subjectId } }: { params:
 
     // NEW: Listener for the active session, just like the professor's page
     const sessionsQuery = query(
-      collection(db, 'subjects', subjectId, 'sessions'),
+      collection(db, 'institutes', instituteId, 'subjects', subjectId, 'sessions'),
       where('isActive', '==', true),
       limit(1)
     );
@@ -55,7 +55,7 @@ export default function MySubjectDetailPage({ params: { subjectId } }: { params:
       attendanceUnsubscribe();
       sessionUnsubscribe();
     };
-  }, [user, subjectId]);
+  }, [user, subjectId, instituteId]);
   
   const chartData = useMemo(() => {
     const counts: { [key: string]: number } = {};

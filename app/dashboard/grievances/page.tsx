@@ -14,28 +14,29 @@ interface Grievance {
 }
 
 export default function GrievancePage() {
-  const { userProfile } = useAuth();
+  const { userProfile, instituteId } = useAuth();
   const [grievances, setGrievances] = useState<Grievance[]>([]);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const q = query(collection(db, 'grievances'), where('status', '==', 'pending'));
+    if (!instituteId) return; 
+    const q = query(collection(db, 'institutes', instituteId, 'grievances'), where('status', '==', 'pending'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setGrievances(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Grievance)));
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [instituteId]);
 
   const handleApprove = async (grievance: Grievance) => {
-    if (!userProfile) return;
+    if (!userProfile || !instituteId) return;
     try {
       // Grant permission on the user's document
-      await updateDoc(doc(db, 'users', grievance.studentId), {
+      await updateDoc(doc(db, 'institutes', instituteId, 'users', grievance.studentId), {
         updateFaceAllowed: true
       });
       // Update the grievance status
-      await updateDoc(doc(db, 'grievances', grievance.id), {
+      await updateDoc(doc(db, 'institutes', instituteId, 'grievances', grievance.id), {
         status: 'approved',
         reviewedBy: userProfile.name,
       });
@@ -47,10 +48,10 @@ export default function GrievancePage() {
   };
 
   const handleReject = async (grievance: Grievance) => {
-    if (!userProfile) return;
+    if (!userProfile || !instituteId) return;
     try {
       // Update the grievance status
-      await updateDoc(doc(db, 'grievances', grievance.id), {
+      await updateDoc(doc(db, 'institutes', instituteId, 'grievances', grievance.id), {
         status: 'rejected',
         reviewedBy: userProfile.name,
       });

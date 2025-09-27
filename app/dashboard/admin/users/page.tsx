@@ -5,6 +5,7 @@ import { db } from '../../../../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import * as faceapi from 'face-api.js';
+import { useAuth } from '@/context/AuthContext';
 
 interface User {
   id: string;
@@ -14,6 +15,7 @@ interface User {
 }
 
 export default function AdminUsersPage() {
+  const { instituteId } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -32,6 +34,7 @@ export default function AdminUsersPage() {
   const [deletingUid, setDeletingUid] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!instituteId) return;
     const loadModels = async () => {
       const MODEL_URL = '/models';
       await Promise.all([
@@ -42,13 +45,13 @@ export default function AdminUsersPage() {
     };
     loadModels();
     
-    const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
+    const unsubscribe = onSnapshot(collection(db, 'institutes', instituteId, 'users'), (snapshot) => {
       const usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
       setUsers(usersList);
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [instituteId]);
 
   const processImageForDescriptor = async (imageElement: HTMLImageElement) => {
     setFeedback("Processing image...");

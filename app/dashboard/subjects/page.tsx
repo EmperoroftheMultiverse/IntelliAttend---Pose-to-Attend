@@ -5,6 +5,7 @@ import { db } from '../../../lib/firebase';
 import { collection, query, where, getDocs, addDoc, doc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '../../../context/AuthContext';
 import Link from 'next/link';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 interface Subject {
   id: string;
@@ -13,7 +14,7 @@ interface Subject {
 }
 
 export default function SubjectsPage() {
-  const { user } = useAuth();
+  const { user, instituteId } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -23,14 +24,15 @@ export default function SubjectsPage() {
 
   // Function to fetch subjects
   const fetchSubjects = useCallback(async () => {
-    if (!user) return;
+    if (!user || !instituteId) return;
     setLoading(true);
-    const q = query(collection(db, 'subjects'), where('professorId', '==', user.uid));
+    const subjectsCollectionRef = collection(db, 'institutes', instituteId, 'subjects');
+    const q = query(subjectsCollectionRef, where('professorId', '==', user.uid));
     const querySnapshot = await getDocs(q);
     const subjectsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
     setSubjects(subjectsList);
     setLoading(false);
-  }, [user]);
+  }, [user, instituteId]);
 
   useEffect(() => {
     fetchSubjects();
@@ -38,11 +40,12 @@ export default function SubjectsPage() {
 
   // Handle form submission to create a new subject
   const handleCreateSubject = async (e: FormEvent) => {
+    if (!user || !instituteId) return;
     e.preventDefault();
     if (!user || !newSubjectName || !newSubjectCode) return;
 
     try {
-      await addDoc(collection(db, 'subjects'), {
+      await addDoc(collection(db, 'institutes', instituteId, 'subjects'), {
         subjectName: newSubjectName,
         subjectCode: newSubjectCode,
         professorId: user.uid,
@@ -59,17 +62,22 @@ export default function SubjectsPage() {
       console.error("Error adding document: ", error);
     }
   };
-  
+
   // Handle deleting a subject
   const handleDeleteSubject = async (subjectId: string) => {
-    if(confirm('Are you sure you want to delete this subject and all its records?')) {
-        try {
-            await deleteDoc(doc(db, 'subjects', subjectId));
-            // Note: In a production app, you would also delete all associated attendance records.
-            fetchSubjects(); // Refresh the list
-        } catch (error) {
-            console.error("Error deleting document: ", error);
-        }
+    if (!instituteId) {
+      alert("Error: Institute information is missing.");
+      return;
+    }
+    if (confirm('Are you sure you want to delete this subject and all its records?')) {
+      try {
+        const functions = getFunctions();
+        const deleteSubjectCallable = httpsCallable(functions, 'deleteSubjectAndAttendance');
+        await deleteSubjectCallable({ subjectId, instituteId });
+      } catch (error) {
+        console.error("Error deleting document: ", error);
+        alert("Failed to delete subject.");
+      }
     }
   };
 
@@ -90,11 +98,11 @@ export default function SubjectsPage() {
         {subjects.map((subject) => (
           <div key={subject.id} className="p-6 bg-white rounded-lg shadow-md flex flex-col justify-between">
             <Link href={`/dashboard/subjects/${subject.id}`}>
-                <h2 className="text-xl font-semibold text-indigo-600 hover:underline">{subject.subjectName}</h2>
-                <p className="text-gray-500">{subject.subjectCode}</p>
+              <h2 className="text-xl font-semibold text-indigo-600 hover:underline">{subject.subjectName}</h2>
+              <p className="text-gray-500">{subject.subjectCode}</p>
             </Link>
             <button onClick={() => handleDeleteSubject(subject.id)} className="mt-4 text-sm text-red-500 hover:text-red-700 self-end">
-                Delete
+              Delete
             </button>
           </div>
         ))}
@@ -115,13 +123,13 @@ export default function SubjectsPage() {
                 <input type="text" value={newSubjectCode} onChange={(e) => setNewSubjectCode(e.target.value)} className="w-full mt-1 p-2 border rounded-md" required />
               </div>
               <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700">Year</label>
-                  <select value={newSubjectYear} onChange={(e) => setNewSubjectYear(Number(e.target.value))} className="w-full mt-1 p-2 border rounded-md" required>
-                      <option value={1}>Year 1</option>
-                      <option value={2}>Year 2</option>
-                      <option value={3}>Year 3</option>
-                      <option value={4}>Year 4</option>
-                  </select>
+                <label className="block text-sm font-medium text-gray-700">Year</label>
+                <select value={newSubjectYear} onChange={(e) => setNewSubjectYear(Number(e.target.value))} className="w-full mt-1 p-2 border rounded-md" required>
+                  <option value={1}>Year 1</option>
+                  <option value={2}>Year 2</option>
+                  <option value={3}>Year 3</option>
+                  <option value={4}>Year 4</option>
+                </select>
               </div>
               <div className="flex justify-end space-x-4">
                 <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 bg-gray-200 rounded-lg">Cancel</button>

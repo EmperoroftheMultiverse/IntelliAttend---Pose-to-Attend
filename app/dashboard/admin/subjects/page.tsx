@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../../../../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import Link from 'next/link';
+import { useAuth } from '../../../../context/AuthContext';
 
 interface Subject {
   id: string;
@@ -18,16 +19,18 @@ interface UserMap {
 }
 
 export default function AdminSubjectsPage() {
+  const { instituteId } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [usersMap, setUsersMap] = useState<UserMap>({}); // NEW: State for the user map
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!instituteId) return;
     const fetchAllData = async () => {
       setLoading(true);
       
       // 1. Fetch all users to create the name map
-      const usersSnapshot = await getDocs(collection(db, 'users'));
+      const usersSnapshot = await getDocs(collection(db, 'institutes', instituteId, 'users'));
       const userMap: UserMap = {};
       usersSnapshot.forEach(doc => {
         userMap[doc.id] = doc.data().name;
@@ -35,7 +38,7 @@ export default function AdminSubjectsPage() {
       setUsersMap(userMap);
 
       // 2. Fetch all subjects
-      const subjectsSnapshot = await getDocs(collection(db, 'subjects'));
+      const subjectsSnapshot = await getDocs(collection(db, 'institutes', instituteId, 'subjects'));
       const subjectsList = subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
       setSubjects(subjectsList);
 
@@ -43,7 +46,7 @@ export default function AdminSubjectsPage() {
     };
 
     fetchAllData();
-  }, []);
+  }, [instituteId]);
 
   if (loading) return <div>Loading all subjects...</div>;
 

@@ -9,19 +9,16 @@
     "logs": "firebase functions:log"
   },
   "engines": {
-    "node": "18"
+    "node": "20"
   },
   "main": "lib/index.js",
   "dependencies": {
     "firebase-admin": "^12.0.0",
-    "firebase-functions": "^5.0.0"
+    "firebase-functions": "^5.0.1"
   },
   "devDependencies": {
-    "typescript": "^5.1.6",
+    "typescript": "^5.3.3",
     "firebase-functions-test": "^3.1.0"
   },
-  "private": true,
-  "overrides": {
-    "@types/node": "18.19.3"
-  }
+  "private": true
 }
