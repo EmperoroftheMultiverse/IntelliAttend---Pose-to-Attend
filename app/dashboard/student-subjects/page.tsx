@@ -30,7 +30,7 @@ export default function StudentSubjectsPage() {
     };
 
     fetchSubjects();
-  }, [userProfile]);
+  }, [userProfile, instituteId]);
 
   if (loading) return <div>Loading subjects for your year...</div>;
 

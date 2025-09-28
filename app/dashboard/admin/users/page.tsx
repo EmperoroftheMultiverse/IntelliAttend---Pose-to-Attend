@@ -5,7 +5,7 @@ import { db } from '../../../../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import * as faceapi from 'face-api.js';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '../../../../context/AuthContext';
 
 interface User {
   id: string;
