@@ -26,8 +26,7 @@ export default function StudentDetailPage({ params: { studentId } }: { params: {
   const [timePeriod, setTimePeriod] = useState('daily');
 
   useEffect(() => {
-    if (!instituteId) return;
-    if (!studentId) return;
+    if (!studentId || !instituteId) return;
 
     const fetchSubjectsMap = async () => {
       const querySnapshot = await getDocs(collection(db, 'institutes', instituteId, "subjects"));
@@ -68,7 +67,7 @@ export default function StudentDetailPage({ params: { studentId } }: { params: {
     });
 
     return () => unsubscribe(); // Cleanup the listener
-  }, [studentId]);
+  }, [studentId, instituteId]);
 
   const chartData = useMemo(() => {
     const counts: { [key: string]: number } = {};

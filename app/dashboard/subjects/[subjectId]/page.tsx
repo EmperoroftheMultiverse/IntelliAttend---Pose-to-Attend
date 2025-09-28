@@ -112,8 +112,7 @@ export default function SubjectDetailPage({ params: { subjectId } }: { params: {
 
   // --- Main Data Fetching and Real-time Listeners ---
   useEffect(() => {
-    if (!instituteId) return;
-    if (!subjectId) return;
+    if (!subjectId || !instituteId) return;
     setLoading(true);
 
     const fetchStudents = async () => {
@@ -151,7 +150,7 @@ export default function SubjectDetailPage({ params: { subjectId } }: { params: {
       attendanceUnsubscribe();
       sessionUnsubscribe();
     };
-  }, [subjectId]);
+  }, [subjectId, instituteId]);
 
   const chartData = useMemo(() => {
     const counts: { [key: string]: number } = {};
