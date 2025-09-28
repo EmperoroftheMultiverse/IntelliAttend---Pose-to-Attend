@@ -13,16 +13,16 @@ interface Subject {
 }
 
 export default function StudentSubjectsPage() {
-  const { userProfile } = useAuth();
+  const { userProfile, instituteId } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userProfile || userProfile.role !== 'student') return;
+    if (!userProfile || userProfile.role !== 'student' || !instituteId) return;
 
     const fetchSubjects = async () => {
       setLoading(true);
-      const q = query(collection(db, 'subjects'), where('year', '==', userProfile.year));
+      const q = query(collection(db, 'institutes', instituteId, 'subjects'), where('year', '==', userProfile.year));
       const querySnapshot = await getDocs(q);
       const subjectsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
       setSubjects(subjectsList);
