@@ -11,7 +11,7 @@ A multi-role, AI-powered attendance system with secure, on-device face recogniti
 - [x] UI upgrades for phones
 - [x] organizational segmentations
 - [x] Glass effect with curved corners where possible (if it can be accomplished)
-- [ ] Better homepage and transitions
+- [x] Better homepage and transitions
 - [ ] Branch Segmentation
 - [ ] Better Liveness Check
 
