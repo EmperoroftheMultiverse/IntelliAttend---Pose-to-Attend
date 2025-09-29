@@ -37,7 +37,7 @@ export default function Sidebar() {
   }
   
   return (
-    <aside className="w-64 bg-gray-800 text-white p-4 flex flex-col">
+    <aside className="w-64 bg-gray-800 text-white p-4 flex flex-col h-full">
       <h2 className="text-xl font-bold mb-6">IntelliAttend</h2>
       <nav className="flex-1">
         <ul>
