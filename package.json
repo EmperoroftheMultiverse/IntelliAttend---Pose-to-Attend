@@ -12,6 +12,7 @@
     "@heroicons/react": "^2.2.0",
     "face-api.js": "^0.22.2",
     "firebase": "^12.2.1",
+    "framer-motion": "^12.23.22",
     "next": "15.5.3",
     "papaparse": "^5.5.3",
     "react": "19.1.0",

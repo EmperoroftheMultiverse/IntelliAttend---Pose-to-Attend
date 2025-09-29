@@ -2,12 +2,17 @@
 
 import { useState, FormEvent } from 'react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { auth } from '../../lib/firebase'; // Import auth
+import { motion } from 'framer-motion';
+import { auth } from '../lib/firebase'; // Import auth
 import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth'; // Import auth functions
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-export default function SignUpPage() {
+interface SignUpModalProps {
+  closeModal: () => void;
+}
+
+export default function SignUpPage({ closeModal }: SignUpModalProps) {
     const [instituteName, setInstituteName] = useState('');
     const [adminName, setAdminName] = useState('');
     const [adminEmail, setAdminEmail] = useState('');
@@ -96,25 +101,29 @@ export default function SignUpPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center glassmorphism p-6 rounded-lg">
-            <div className="w-full max-w-md p-8 space-y-6 glassmorphism p-6 rounded-lg shadow-md">
-                <h1 className="text-2xl font-bold text-center">Register Your Institute</h1>
-                <form onSubmit={handleSignUp} className="space-y-4">
-                    <input type="text" placeholder="Institute Name" value={instituteName} onChange={(e) => setInstituteName(e.target.value)} className="w-full p-2 border rounded" required />
-                    <input type="text" placeholder="Your Full Name" value={adminName} onChange={(e) => setAdminName(e.target.value)} className="w-full p-2 border rounded" required />
-                    <input type="email" placeholder="Your Email (Admin)" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} className="w-full p-2 border rounded" required />
-                    <input type="password" placeholder="Password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="w-full p-2 border rounded" required minLength={6} />
-                    <button type="submit" disabled={isSubmitting} className="w-full px-4 py-2 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-gray-400">
-                        {isSubmitting ? 'Registering...' : 'Create Institute'}
-                    </button>
-                    {feedback && <p className={`mt-2 text-sm text-center ${feedback.includes('✅') ? 'text-green-600' : 'text-red-600'}`}>{feedback}</p>}
-                </form>
-                <div className="text-center mt-4">
-                    <Link href="/login" className="text-sm text-indigo-600 hover:underline">
-                        Already have an account? Log In
-                    </Link>
-                </div>
+        <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="w-full max-w-md p-8 space-y-6 bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg"
+        >
+            <h1 className="text-2xl font-bold text-center">Register Your Institute</h1>
+            <form onSubmit={handleSignUp} className="space-y-4">
+                <input type="text" placeholder="Institute Name" value={instituteName} onChange={(e) => setInstituteName(e.target.value)} className="w-full p-2 border rounded" required />
+                <input type="text" placeholder="Your Full Name" value={adminName} onChange={(e) => setAdminName(e.target.value)} className="w-full p-2 border rounded" required />
+                <input type="email" placeholder="Your Email (Admin)" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} className="w-full p-2 border rounded" required />
+                <input type="password" placeholder="Password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="w-full p-2 border rounded" required minLength={6} />
+                <button type="submit" disabled={isSubmitting} className="w-full px-4 py-2 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-gray-400">
+                    {isSubmitting ? 'Registering...' : 'Create Institute'}
+                </button>
+                {feedback && <p className={`mt-2 text-sm text-center ${feedback.includes('✅') ? 'text-green-600' : 'text-red-600'}`}>{feedback}</p>}
+            </form>
+            <div className="text-center mt-4">
+                <Link href="/login" className="text-sm text-indigo-600 hover:underline">
+                    Already have an account? Log In
+                </Link>
             </div>
-        </div>
+
+        </motion.div>
     );
 }
