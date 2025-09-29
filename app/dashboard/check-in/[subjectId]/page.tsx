@@ -226,6 +226,7 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
         const leftEye = detections.landmarks.getLeftEye();
         const rightEye = detections.landmarks.getRightEye();
         const averageEAR = (getEyeAspectRatio(leftEye) + getEyeAspectRatio(rightEye)) / 2.0;
+        console.log(averageEAR);
 
         // Step 1: Confirm eyes are open first
         if (averageEAR > EAR_OPEN_THRESHOLD) {
