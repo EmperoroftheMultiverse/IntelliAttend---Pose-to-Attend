@@ -44,7 +44,7 @@ export default function StudentsPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">All Students</h1>
-      <div className="bg-white shadow-md rounded-lg">
+      <div className="glassmorphism p-6 rounded-lg shadow-md">
         <ul className="divide-y divide-gray-200">
           {students.map((student) => (
             <li key={student.id}>

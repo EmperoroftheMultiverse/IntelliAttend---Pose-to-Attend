@@ -218,7 +218,7 @@ export default function SubjectDetailPage({ params: { subjectId } }: { params: {
         </div>
       </div>
 
-      <div className="my-6 bg-white p-6 rounded-lg shadow-md">
+      <div className="my-6 glassmorphism p-6 rounded-lg shadow-md">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-semibold text-gray-700">Attendance Trend</h3>
           <div className="flex space-x-2">
@@ -230,7 +230,7 @@ export default function SubjectDetailPage({ params: { subjectId } }: { params: {
         <AttendanceChart data={chartData} />
       </div>
 
-      <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
+      <div className="w-full glassmorphism p-6 rounded-lg shadow-md overflow-hidden">
         <div className="px-6 py-4 border-b"><h2 className="text-xl font-semibold">Full Attendance Log</h2></div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm font-light">
@@ -265,8 +265,8 @@ export default function SubjectDetailPage({ params: { subjectId } }: { params: {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+        <div className="fixed inset-0 glassmorphism p-6 rounded-lg bg-opacity-50 flex items-center justify-center z-50">
+          <div className="glassmorphism p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 className="text-2xl font-bold mb-4">Add Manual Entry</h2>
             <form onSubmit={handleAddEntry}>
               <div className="mb-4">

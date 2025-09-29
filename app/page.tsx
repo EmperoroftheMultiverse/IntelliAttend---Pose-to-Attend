@@ -38,7 +38,7 @@ export default function HomePage() {
             <h3 className="text-3xl font-bold text-center mb-12">Why Choose IntelliAttend?</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {/* Feature 1 */}
-              <div className="bg-white p-8 rounded-lg shadow-lg text-center">
+              <div className="glassmorphism p-8 rounded-lg shadow-lg text-center">
                 <ShieldCheckIcon className="h-12 w-12 mx-auto mb-4 text-indigo-500" />
                 <h4 className="text-xl font-semibold mb-2">Secure & Proxy-Proof</h4>
                 <p className="text-gray-600">
@@ -46,7 +46,7 @@ export default function HomePage() {
                 </p>
               </div>
               {/* Feature 2 */}
-              <div className="bg-white p-8 rounded-lg shadow-lg text-center">
+              <div className="glassmorphism p-8 rounded-lg shadow-lg text-center">
                 <UserGroupIcon className="h-12 w-12 mx-auto mb-4 text-indigo-500" />
                 <h4 className="text-xl font-semibold mb-2">Multi-Role Portals</h4>
                 <p className="text-gray-600">
@@ -54,7 +54,7 @@ export default function HomePage() {
                 </p>
               </div>
               {/* Feature 3 */}
-              <div className="bg-white p-8 rounded-lg shadow-lg text-center">
+              <div className="glassmorphism p-8 rounded-lg shadow-lg text-center">
                 <ChartBarIcon className="h-12 w-12 mx-auto mb-4 text-indigo-500" />
                 <h4 className="text-xl font-semibold mb-2">Powerful Analytics</h4>
                 <p className="text-gray-600">

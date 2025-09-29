@@ -96,7 +96,7 @@ export default function SubjectsPage() {
       {/* Subject List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {subjects.map((subject) => (
-          <div key={subject.id} className="p-6 bg-white rounded-lg shadow-md flex flex-col justify-between">
+          <div key={subject.id} className="glassmorphism p-6 rounded-lg shadow-md flex flex-col justify-between">
             <Link href={`/dashboard/subjects/${subject.id}`}>
               <h2 className="text-xl font-semibold text-indigo-600 hover:underline">{subject.subjectName}</h2>
               <p className="text-gray-500">{subject.subjectCode}</p>
@@ -110,8 +110,8 @@ export default function SubjectsPage() {
 
       {/* Create Subject Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+        <div className="fixed inset-0 glassmorphism p-6 rounded-lg bg-opacity-50 flex items-center justify-center">
+          <div className="glassmorphism p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 className="text-2xl font-bold mb-4">Create New Subject</h2>
             <form onSubmit={handleCreateSubject}>
               <div className="mb-4">

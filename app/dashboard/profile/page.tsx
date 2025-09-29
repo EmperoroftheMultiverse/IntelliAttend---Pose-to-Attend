@@ -148,7 +148,7 @@ export default function ProfilePage() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">My Profile</h1>
-      <div className="bg-white p-6 rounded-lg shadow-md">
+      <div className="glassmorphism p-6 rounded-lg shadow-md">
         <p className="mb-2"><strong>Name:</strong> {userProfile?.name}</p>
         <p className="mb-4"><strong>Email:</strong> {userProfile?.email}</p>
 
@@ -195,7 +195,7 @@ export default function ProfilePage() {
         )}
       </div>
       {/* NEW: Change Password Card */}
-      <div className="bg-white p-6 rounded-lg shadow-md">
+      <div className="mb-4 glassmorphism p-6 rounded-lg shadow-md">
         <h2 className="text-xl font-semibold mb-4">Change Password</h2>
         <form onSubmit={handleChangePassword}>
           <div className="mb-4">

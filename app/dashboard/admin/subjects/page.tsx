@@ -53,7 +53,7 @@ export default function AdminSubjectsPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">All Institute Subjects</h1>
-      <div className="bg-white shadow-md rounded-lg">
+      <div className="glassmorphism p-6 rounded-lg shadow-md">
         <ul className="divide-y divide-gray-200">
           {subjects.map((subject) => (
             <li key={subject.id}>

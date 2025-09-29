@@ -69,7 +69,7 @@ export default function GrievancePage() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">Review Face Update Requests</h1>
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
+      <div className="glassmorphism p-6 rounded-lg shadow-md overflow-hidden">
         <table className="min-w-full text-left text-sm font-light">
           <thead className="border-b bg-gray-100 font-medium">
             <tr>

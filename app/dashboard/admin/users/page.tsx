@@ -151,7 +151,34 @@ export default function AdminUsersPage() {
         </button>
       </div>
 
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
+      {/* Mobile View: Card Layout (hidden on medium screens and up) */}
+      <div className="md:hidden space-y-4">
+        {users.map((user) => (
+          <div key={user.id} className="glassmorphism p-4 rounded-lg shadow-md">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="font-semibold">{user.name}</p>
+                <p className="text-sm text-gray-500">{user.email}</p>
+              </div>
+              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-red-100 text-red-800' : user.role === 'professor' ? 'bg-indigo-100 text-indigo-800' : 'bg-green-100 text-green-800'}`}>
+                {user.role.toUpperCase()}
+              </span>
+            </div>
+            <div className="mt-4 text-right">
+              <button 
+                onClick={() => handleDeleteUser(user.id)} 
+                disabled={deletingUid === user.id}
+                className="text-red-500 hover:text-red-700 font-semibold disabled:text-gray-400"
+              >
+                {deletingUid === user.id ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop View: Table Layout (hidden on small screens) */}
+      <div className="hidden md:block bg-white shadow-md rounded-lg overflow-hidden">
         <table className="min-w-full text-left text-sm font-light">
           <thead className="border-b bg-gray-100 font-medium">
             <tr>
@@ -175,7 +202,7 @@ export default function AdminUsersPage() {
                     <button 
                       onClick={() => handleDeleteUser(user.id)} 
                       disabled={deletingUid === user.id}
-                      className="text-red-500 hover:text-red-700 font-semibold disabled:text-gray-400 disabled:cursor-wait"
+                      className="text-red-500 hover:text-red-700 font-semibold disabled:text-gray-400"
                     >
                       {deletingUid === user.id ? 'Deleting...' : 'Delete'}
                     </button>
@@ -187,8 +214,8 @@ export default function AdminUsersPage() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+        <div className="fixed inset-0 glassmorphism p-6 rounded-lg bg-opacity-50 flex items-center justify-center z-50">
+          <div className="glassmorphism p-8 rounded-lg shadow-xl w-full max-w-md">
             <h2 className="text-2xl font-bold mb-4">Create New User</h2>
             <form onSubmit={handleCreateUser}>
               <div className="mb-4">

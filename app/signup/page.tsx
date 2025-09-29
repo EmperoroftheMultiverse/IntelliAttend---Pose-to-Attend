@@ -96,8 +96,8 @@ export default function SignUpPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-            <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+        <div className="min-h-screen flex items-center justify-center glassmorphism p-6 rounded-lg">
+            <div className="w-full max-w-md p-8 space-y-6 glassmorphism p-6 rounded-lg shadow-md">
                 <h1 className="text-2xl font-bold text-center">Register Your Institute</h1>
                 <form onSubmit={handleSignUp} className="space-y-4">
                     <input type="text" placeholder="Institute Name" value={instituteName} onChange={(e) => setInstituteName(e.target.value)} className="w-full p-2 border rounded" required />

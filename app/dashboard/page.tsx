@@ -143,7 +143,7 @@ function ProfessorDashboard() {
         <StatCard title="Total Attendance Records" value={attendance.length} />
         <StatCard title="Active Subjects" value={subjectCount} />
       </div>
-      <div className="mb-6 bg-white p-6 rounded-lg shadow-md">
+      <div className="mb-6 glassmorphism p-6 rounded-lg shadow-md">
         <div className="flex justify-between items-center mb-4">
             <h3 className="font-semibold text-gray-700">Attendance Trend</h3>
             <div className="flex space-x-2">
@@ -154,7 +154,7 @@ function ProfessorDashboard() {
         </div>
         <AttendanceChart data={chartData} /> 
       </div>
-      <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
+      <div className="w-full glassmorphism p-6 rounded-lg shadow-md overflow-hidden">
         <div className="px-6 py-4 border-b"><h2 className="text-xl font-semibold">Full Attendance Log</h2></div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm font-light">
@@ -217,7 +217,7 @@ function StudentDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {mySubjects.map((subject) => (
                 <Link key={subject.id} href={`/dashboard/my-subjects/${subject.id}`}>
-                    <div className="block p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                    <div className="block p-6 glassmorphism p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
                         <h3 className="text-lg font-semibold text-indigo-600">{subject.subjectName}</h3>
                         <p className="text-gray-500">{subject.subjectCode}</p>
                     </div>
@@ -226,7 +226,7 @@ function StudentDashboard() {
             </div>
        </div>
 
-       <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
+       <div className="w-full glassmorphism p-6 rounded-lg shadow-md overflow-hidden">
         <div className="px-6 py-4 border-b"><h2 className="text-xl font-semibold">Recent Activity</h2></div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm font-light">

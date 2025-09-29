@@ -40,7 +40,7 @@ export default function StudentSubjectsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {subjects.map((subject) => (
           <Link key={subject.id} href={`/dashboard/my-subjects/${subject.id}`}>
-            <div className="block p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow">
+            <div className="block glassmorphism p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
               <h2 className="text-xl font-semibold text-indigo-600">{subject.subjectName}</h2>
               <p className="text-gray-500">{subject.subjectCode}</p>
             </div>

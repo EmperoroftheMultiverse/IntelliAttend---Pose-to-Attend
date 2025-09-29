@@ -27,8 +27,8 @@ export default function LoginPage() {
 
   // The function must return a JSX element to be a valid component.
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+    <div className="flex items-center justify-center min-h-screen glassmorphism p-6 rounded-lg">
+      <div className="w-full max-w-md p-8 space-y-6 glassmorphism p-6 rounded-lg shadow-md">
         <h1 className="text-2xl font-bold text-center">IntelliAttend Login</h1>
         <form onSubmit={handleLogin} className="space-y-6">
           <div>

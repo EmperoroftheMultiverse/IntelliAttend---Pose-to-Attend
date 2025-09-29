@@ -26,8 +26,8 @@ body {
 }
 
 .glassmorphism {
-  background: rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px); /* For Safari */
+  background: rgba(196, 171, 255, 0.25);
+  backdrop-filter: blur(3.5px);
+  -webkit-backdrop-filter: blur(3.5px); /* For Safari */
   border: 1px solid rgba(255, 255, 255, 0.18);
 }

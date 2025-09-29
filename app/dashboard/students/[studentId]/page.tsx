@@ -118,7 +118,7 @@ export default function StudentDetailPage({ params: { studentId } }: { params: {
     <div>
       <h1 className="text-3xl font-bold">{studentDetails?.name}</h1>
       <p className="text-lg text-gray-600 mb-6">{studentDetails?.email} - Attendance History</p>
-      <div className="mb-6 bg-white p-6 rounded-lg shadow-md">
+      <div className="mb-6 glassmorphism p-6 rounded-lg shadow-md">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-semibold text-gray-700">Attendance Trend</h3>
           <div className="flex space-x-2">
@@ -130,27 +130,28 @@ export default function StudentDetailPage({ params: { studentId } }: { params: {
         <AttendanceChart data={chartData} />
       </div>
 
-      <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
+      <div className="w-full glassmorphism p-6 rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
+
+          <table className="min-w-full text-left text-sm font-light">
+            <thead className="border-b bg-gray-100 font-medium">
+              <tr>
+                <th scope="col" className="px-6 py-4">Date & Time</th>
+                <th scope="col" className="px-6 py-4">Subject</th> {/* 👈 Change column header */}
+              </tr>
+            </thead>
+            <tbody>
+              {attendance.map((record) => (
+                <tr key={record.id} className="border-b">
+                  <td className="whitespace-nowrap px-6 py-4">{record.timestamp.toDate().toLocaleString()}</td>
+                  {/* 👇 Use the map to look up the name */}
+                  <td className="whitespace-nowrap px-6 py-4 font-medium">{subjectsMap[record.subjectId] || record.subjectId}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
-      <table className="min-w-full text-left text-sm font-light">
-        <thead className="border-b bg-gray-100 font-medium">
-          <tr>
-            <th scope="col" className="px-6 py-4">Date & Time</th>
-            <th scope="col" className="px-6 py-4">Subject</th> {/* 👈 Change column header */}
-          </tr>
-        </thead>
-        <tbody>
-          {attendance.map((record) => (
-            <tr key={record.id} className="border-b">
-              <td className="whitespace-nowrap px-6 py-4">{record.timestamp.toDate().toLocaleString()}</td>
-              {/* 👇 Use the map to look up the name */}
-              <td className="whitespace-nowrap px-6 py-4 font-medium">{subjectsMap[record.subjectId] || record.subjectId}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }

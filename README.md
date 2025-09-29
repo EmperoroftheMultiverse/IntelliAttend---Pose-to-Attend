@@ -10,8 +10,8 @@ A multi-role, AI-powered attendance system with secure, on-device face recogniti
 - [x] Once logged in, give the users option to change their password
 - [x] UI upgrades for phones
 - [x] organizational segmentations
-- [ ] Glass effect with curved corners where possible (if it can be accomplished)
-- [ ] Better homepage
+- [x] Glass effect with curved corners where possible (if it can be accomplished)
+- [ ] Better homepage and transitions
 
 ### Bugs
 - [x] Students should have a subjects tab in their sidebar where all the subjects, which are tagged for year corresponding to them is visible 
