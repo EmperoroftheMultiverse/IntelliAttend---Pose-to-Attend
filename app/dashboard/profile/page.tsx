@@ -195,7 +195,7 @@ export default function ProfilePage() {
         )}
       </div>
       {/* NEW: Change Password Card */}
-      <div className="mb-4 glassmorphism p-6 rounded-lg shadow-md">
+      <div className="glassmorphism p-6 rounded-lg shadow-md">
         <h2 className="text-xl font-semibold mb-4">Change Password</h2>
         <form onSubmit={handleChangePassword}>
           <div className="mb-4">
