@@ -9,7 +9,7 @@ A multi-role, AI-powered attendance system with secure, on-device face recogniti
 - [x] Segregation on basis of year
 - [x] Once logged in, give the users option to change their password
 - [ ] UI upgrades for phones
-- [ ] organizational segmentations
+- [x] organizational segmentations
 - [ ] Glass effect with curved corners where possible (if it can be accomplished)
 - [ ] Better homepage
 
