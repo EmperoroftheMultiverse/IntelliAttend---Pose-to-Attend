@@ -220,7 +220,7 @@ export default function CheckInPage({ params: { subjectId } }: { params: { subje
         canvasRef.current.getContext('2d')?.clearRect(0, 0, video.videoWidth, video.videoHeight);
         faceapi.draw.drawDetections(canvasRef.current, resizedDetections);
 
-        const EAR_THRESHOLD = 0.27; // Threshold for a blink
+        const EAR_THRESHOLD = 0.28; // Threshold for a blink
         const EAR_OPEN_THRESHOLD = 0.29; // Threshold to confirm eyes were open first
         
         const leftEye = detections.landmarks.getLeftEye();
